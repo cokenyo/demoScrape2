@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
 )
 
@@ -43,10 +44,11 @@ var killValues = map[string]float64{
 }
 
 type game struct {
-	rounds []*round
-	teams  map[int]*team
-	flags  flag
-	mapName
+	rounds           []*round
+	potentialRound   *round
+	teams            map[int]*team
+	flags            flag
+	mapName          string
 	tickRate         int
 	tickLength       uint64
 	roundsToWin      int //30 or 16
@@ -176,6 +178,7 @@ func main() {
 func initGameObject() *game {
 	g := game{}
 	g.rounds = make([]*round, 0)
+	g.potentialRound = &round{}
 
 	g.flags.hasGameStarted = false
 	g.flags.isGameLive = false
@@ -269,40 +272,50 @@ func processDemo(demoName string) {
 
 	}
 
+	//reset various flags
+	resetRoundFlags := func() {
+		game.flags.prePlant = true
+		game.flags.postPlant = false
+		game.flags.postWinCon = false
+		game.flags.tClutchVal = 0
+		game.flags.ctClutchVal = 0
+		game.flags.tClutchSteam = 0
+		game.flags.ctClutchSteam = 0
+		game.flags.tMoney = false
+		game.flags.openingKill = true
+	}
+
+	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
+		for _, teamMember := range team.Members() {
+			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, teamID: team.ID(), health: 100, tradeList: make(map[uint64]int)}
+			currRoundObj.playerStats[player.steamID] = player
+		}
+	}
+
 	initRound := func() {
 		game.flags.roundIntegrityStart = p.GameState().TotalRoundsPlayed() + 1
 		fmt.Println("We are starting round", game.flags.roundIntegrityStart)
-		game.flags.tMoney = false
-		game.flags.openingKill = true
 
-		currRoundObj := &round{roundNum: int8(game.flags.roundIntegrityStart), startingTick: p.GameState().IngameTick()}
-		currRoundObj.playerStats = make(map[uint64]*playerStats)
-		currRoundObj.teamStats = make(map[int]*teamStats)
+		newRound := &round{roundNum: int8(game.flags.roundIntegrityStart), startingTick: p.GameState().IngameTick()}
+		newRound.playerStats = make(map[uint64]*playerStats)
+		newRound.teamStats = make(map[int]*teamStats)
 
 		//set players in playerStats for the round
 		terrorists := p.GameState().TeamTerrorists()
-		for _, terrorist := range terrorists.Members() {
-			player := &playerStats{name: terrorist.Name, steamID: terrorist.SteamID64, teamID: terrorists.ID(), health: 100, tradeList: make(map[uint64]int)}
-			currRoundObj.playerStats[player.steamID] = player
-		}
 		counterTerrorists := p.GameState().TeamCounterTerrorists()
-		for _, counterTerrorist := range counterTerrorists.Members() {
-			player := &playerStats{name: counterTerrorist.Name, steamID: counterTerrorist.SteamID64, teamID: counterTerrorists.ID(), health: 100, tradeList: make(map[uint64]int)}
-			currRoundObj.playerStats[player.steamID] = player
-		}
+
+		initTeamPlayer(terrorists, newRound)
+		initTeamPlayer(counterTerrorists, newRound)
 
 		//set teams in teamStats for the round
-		currRoundObj.teamStats[p.GameState().TeamTerrorists().ID()] = &teamStats{}
-		currRoundObj.teamStats[p.GameState().TeamCounterTerrorists().ID()] = &teamStats{}
+		newRound.teamStats[p.GameState().TeamTerrorists().ID()] = &teamStats{}
+		newRound.teamStats[p.GameState().TeamCounterTerrorists().ID()] = &teamStats{}
 
-		if len(game.rounds) == 0 {
-			game.rounds = append(game.rounds, currRoundObj)
-		} else {
-			game.rounds[0] = currRoundObj
-		}
+		// Reset round
+		game.potentialRound = newRound
 
 		// if len(game.rounds) < game.flags.roundIntegrityStart {
-		// 	//game.rounds[0] = currRoundObj
+		// 	//game.potentialRound = currRoundObj
 		// } else {
 		// 	//game.rounds[roundIntegrityStart - 1] = currRoundObj
 		// 	fmt.Println(game.rounds[game.flags.roundIntegrityStart - 1].integrityCheck)
@@ -312,17 +325,10 @@ func processDemo(demoName string) {
 		//track the number of people alive for clutch checking and record keeping
 		game.flags.tAlive = len(terrorists.Members())
 		game.flags.ctAlive = len(counterTerrorists.Members())
-		game.rounds[0].initTerroristCount = game.flags.tAlive
-		game.rounds[0].initCTerroristCount = game.flags.ctAlive
+		game.potentialRound.initTerroristCount = game.flags.tAlive
+		game.potentialRound.initCTerroristCount = game.flags.ctAlive
 
-		//reset various flags
-		game.flags.prePlant = true
-		game.flags.postPlant = false
-		game.flags.postWinCon = false
-		game.flags.tClutchVal = 0
-		game.flags.ctClutchVal = 0
-		game.flags.tClutchSteam = 0
-		game.flags.ctClutchSteam = 0
+		resetRoundFlags()
 	}
 
 	processRoundOnWinCon := func(winnerID int) {
@@ -334,14 +340,14 @@ func processDemo(demoName string) {
 		game.flags.postWinCon = true
 
 		//set winner
-		game.rounds[0].winnerID = winnerID
-		game.teams[game.rounds[0].winnerID].score += 1
+		game.potentialRound.winnerID = winnerID
+		game.teams[game.potentialRound.winnerID].score += 1
 		//check clutch
 
 	}
 
 	processRoundFinal := func(lastRound bool) {
-		game.rounds[0].endingTick = p.GameState().IngameTick()
+		game.potentialRound.endingTick = p.GameState().IngameTick()
 		game.flags.roundIntegrityEndOfficial = p.GameState().TotalRoundsPlayed()
 		if lastRound {
 			game.flags.roundIntegrityEndOfficial += 1
@@ -351,52 +357,52 @@ func processDemo(demoName string) {
 
 		//we have the entire round uninterrupted
 		if game.flags.roundIntegrityStart == game.flags.roundIntegrityEnd && game.flags.roundIntegrityEnd == game.flags.roundIntegrityEndOfficial {
-			game.rounds[0].integrityCheck = true
+			game.potentialRound.integrityCheck = true
 
 			//check saves
 
 			//set the clutch
-			if game.rounds[0].winnerENUM == 2 && game.flags.tClutchSteam != 0 {
-				game.rounds[0].playerStats[game.flags.tClutchSteam].impactPoints += clutchBonus[game.flags.tClutchVal]
+			if game.potentialRound.winnerENUM == 2 && game.flags.tClutchSteam != 0 {
+				game.potentialRound.playerStats[game.flags.tClutchSteam].impactPoints += clutchBonus[game.flags.tClutchVal]
 				switch game.flags.tClutchVal {
 				case 1:
-					game.rounds[0].playerStats[game.flags.tClutchSteam].cl_1 = 1
+					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_1 = 1
 				case 2:
-					game.rounds[0].playerStats[game.flags.tClutchSteam].cl_2 = 1
+					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_2 = 1
 				case 3:
-					game.rounds[0].playerStats[game.flags.tClutchSteam].cl_3 = 1
+					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_3 = 1
 				case 4:
-					game.rounds[0].playerStats[game.flags.tClutchSteam].cl_4 = 1
+					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_4 = 1
 				case 5:
-					game.rounds[0].playerStats[game.flags.tClutchSteam].cl_5 = 1
+					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_5 = 1
 				}
-			} else if game.rounds[0].winnerENUM == 3 && game.flags.ctClutchSteam != 0 {
+			} else if game.potentialRound.winnerENUM == 3 && game.flags.ctClutchSteam != 0 {
 				switch game.flags.ctClutchVal {
 				case 1:
-					game.rounds[0].playerStats[game.flags.ctClutchSteam].cl_1 = 1
+					game.potentialRound.playerStats[game.flags.ctClutchSteam].cl_1 = 1
 				case 2:
-					game.rounds[0].playerStats[game.flags.ctClutchSteam].cl_2 = 1
+					game.potentialRound.playerStats[game.flags.ctClutchSteam].cl_2 = 1
 				case 3:
-					game.rounds[0].playerStats[game.flags.ctClutchSteam].cl_3 = 1
+					game.potentialRound.playerStats[game.flags.ctClutchSteam].cl_3 = 1
 				case 4:
-					game.rounds[0].playerStats[game.flags.ctClutchSteam].cl_4 = 1
+					game.potentialRound.playerStats[game.flags.ctClutchSteam].cl_4 = 1
 				case 5:
-					game.rounds[0].playerStats[game.flags.ctClutchSteam].cl_5 = 1
+					game.potentialRound.playerStats[game.flags.ctClutchSteam].cl_5 = 1
 				}
 			}
 
 			//add multikills & saves & misc
-			for _, player := range (game.rounds[0]).playerStats {
+			for _, player := range (game.potentialRound).playerStats {
 				if player.deaths == 0 {
 					player.kastRounds = 1
-					if player.teamID != game.rounds[0].winnerID {
+					if player.teamID != game.potentialRound.winnerID {
 						fmt.Println("Player on team this saved:", player.teamID)
 						player.saves = 1
 					}
 				}
-				game.rounds[0].playerStats[player.steamID].impactPoints += player.killPoints
-				game.rounds[0].playerStats[player.steamID].impactPoints += float64(player.damage) / float64(250)
-				game.rounds[0].playerStats[player.steamID].impactPoints += multikillBonus[player.kills]
+				game.potentialRound.playerStats[player.steamID].impactPoints += player.killPoints
+				game.potentialRound.playerStats[player.steamID].impactPoints += float64(player.damage) / float64(250)
+				game.potentialRound.playerStats[player.steamID].impactPoints += multikillBonus[player.kills]
 				switch player.kills {
 				case 2:
 					player._2k = 1
@@ -408,13 +414,13 @@ func processDemo(demoName string) {
 					player._5k = 1
 				}
 
-				if player.teamID == game.rounds[0].winnerENUM {
+				if player.teamID == game.potentialRound.winnerENUM {
 					player.winPoints = player.impactPoints
 				}
 			}
 
 			//add our valid round
-			game.rounds = append(game.rounds, game.rounds[0])
+			game.rounds = append(game.rounds, game.potentialRound)
 		}
 
 		//endRound function functionality
@@ -468,7 +474,7 @@ func processDemo(demoName string) {
 
 		//we want to actually process the round
 		if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
-			game.rounds[0].winnerENUM = int(e.Winner)
+			game.potentialRound.winnerENUM = int(e.Winner)
 			processRoundOnWinCon((*(e.WinnerState)).ID())
 
 			//check last round
@@ -517,9 +523,8 @@ func processDemo(demoName string) {
 
 	// Register handler on kill events
 	p.RegisterEventHandler(func(e events.Kill) {
-		if game.flags.isGameLive && ((int(game.rounds[0].roundNum) == p.GameState().TotalRoundsPlayed()+1) ||
-			(int(game.rounds[0].roundNum) == p.GameState().TotalRoundsPlayed() && game.flags.postWinCon)) {
-			pS := game.rounds[0].playerStats
+		if game.flags.isGameLive && isDuringExpectedRound(game, p) {
+			pS := game.potentialRound.playerStats
 			tick := p.GameState().IngameTick()
 
 			killerExists := false
@@ -547,10 +552,10 @@ func processDemo(demoName string) {
 				pS[e.Victim.SteamID64].deathTick = tick
 				if e.Victim.Team == 2 {
 					game.flags.tAlive -= 1
-					pS[e.Victim.SteamID64].deathPlacement = float64(game.rounds[0].initTerroristCount - game.flags.tAlive)
+					pS[e.Victim.SteamID64].deathPlacement = float64(game.potentialRound.initTerroristCount - game.flags.tAlive)
 				} else if e.Victim.Team == 3 {
 					game.flags.ctAlive -= 1
-					pS[e.Victim.SteamID64].deathPlacement = float64(game.rounds[0].initCTerroristCount - game.flags.ctAlive)
+					pS[e.Victim.SteamID64].deathPlacement = float64(game.potentialRound.initCTerroristCount - game.flags.ctAlive)
 				} else {
 					//else log an error
 				}
@@ -577,8 +582,8 @@ func processDemo(demoName string) {
 					}
 				}
 
-				pS[e.Victim.SteamID64].ticksAlive = tick - game.rounds[0].startingTick
-				for deadGuySteam, deadTick := range (*game.rounds[0]).playerStats[e.Victim.SteamID64].tradeList {
+				pS[e.Victim.SteamID64].ticksAlive = tick - game.potentialRound.startingTick
+				for deadGuySteam, deadTick := range (*game.potentialRound).playerStats[e.Victim.SteamID64].tradeList {
 					if tick-deadTick < 4*game.tickRate {
 						pS[deadGuySteam].traded = 1
 						pS[deadGuySteam].kastRounds = 1
@@ -610,7 +615,7 @@ func processDemo(demoName string) {
 				if e.IsHeadshot {
 					pS[e.Killer.SteamID64].hs += 1
 				}
-				for _, deadTick := range (*game.rounds[0]).playerStats[e.Victim.SteamID64].tradeList {
+				for _, deadTick := range (*game.potentialRound).playerStats[e.Victim.SteamID64].tradeList {
 					if tick-deadTick < 4*game.tickRate {
 						pS[e.Killer.SteamID64].trades += 1
 						traded = true
@@ -639,14 +644,14 @@ func processDemo(demoName string) {
 					}
 				} else if game.flags.postWinCon {
 					//exit or chase
-					if game.rounds[0].winnerENUM == 2 { //Ts win
+					if game.potentialRound.winnerENUM == 2 { //Ts win
 						if killerTeam == 2 { //chase
 							killValue = 0.8
 						}
 						if killerTeam == 3 { //exit
 							killValue = 0.6
 						}
-					} else if game.rounds[0].winnerENUM == 3 { //CTs win
+					} else if game.potentialRound.winnerENUM == 3 { //CTs win
 						if killerTeam == 2 { //T kill in lost round
 							killValue = 0.5
 						}
@@ -726,14 +731,14 @@ func processDemo(demoName string) {
 		if game.flags.isGameLive {
 			equipment := e.Weapon.Type
 			if e.Player != nil && e.Attacker != nil && e.Player.Team != e.Attacker.Team {
-				game.rounds[0].playerStats[e.Attacker.SteamID64].damage += e.HealthDamageTaken
+				game.potentialRound.playerStats[e.Attacker.SteamID64].damage += e.HealthDamageTaken
 				if equipment >= 500 && equipment <= 506 {
-					game.rounds[0].playerStats[e.Attacker.SteamID64].utilDmg += e.HealthDamageTaken
+					game.potentialRound.playerStats[e.Attacker.SteamID64].utilDmg += e.HealthDamageTaken
 					if equipment == 506 {
-						game.rounds[0].playerStats[e.Attacker.SteamID64].nadeDmg += e.HealthDamageTaken
+						game.potentialRound.playerStats[e.Attacker.SteamID64].nadeDmg += e.HealthDamageTaken
 					}
 					if equipment == 502 || equipment == 503 {
-						game.rounds[0].playerStats[e.Attacker.SteamID64].infernoDmg += e.HealthDamageTaken
+						game.potentialRound.playerStats[e.Attacker.SteamID64].infernoDmg += e.HealthDamageTaken
 					}
 				}
 			}
@@ -748,11 +753,11 @@ func processDemo(demoName string) {
 			victim := e.Player
 			flasher := e.Attacker
 			if flasher.Team != victim.Team && blindTicks > 128.0 && victim.IsAlive() && (float64(victim.FlashDuration) < (blindTicks/128.0 + 1)) {
-				game.rounds[0].playerStats[flasher.SteamID64].ef += 1
-				game.rounds[0].playerStats[flasher.SteamID64].enemyFlashTime += blindTicks
-				if tick+blindTicks > game.rounds[0].playerStats[victim.SteamID64].mostRecentFlashVal {
-					game.rounds[0].playerStats[victim.SteamID64].mostRecentFlashVal = tick + blindTicks
-					game.rounds[0].playerStats[victim.SteamID64].mostRecentFlasher = flasher.SteamID64
+				game.potentialRound.playerStats[flasher.SteamID64].ef += 1
+				game.potentialRound.playerStats[flasher.SteamID64].enemyFlashTime += blindTicks
+				if tick+blindTicks > game.potentialRound.playerStats[victim.SteamID64].mostRecentFlashVal {
+					game.potentialRound.playerStats[victim.SteamID64].mostRecentFlashVal = tick + blindTicks
+					game.potentialRound.playerStats[victim.SteamID64].mostRecentFlasher = flasher.SteamID64
 				}
 
 			}
@@ -776,7 +781,7 @@ func processDemo(demoName string) {
 			game.flags.postPlant = true
 			game.flags.postWinCon = false
 			game.flags.tMoney = true
-			game.rounds[0].planter = e.BombEvent.Player.SteamID64
+			game.potentialRound.planter = e.BombEvent.Player.SteamID64
 		}
 	})
 
@@ -786,7 +791,7 @@ func processDemo(demoName string) {
 			game.flags.prePlant = false
 			game.flags.postPlant = false
 			game.flags.postWinCon = true
-			game.rounds[0].playerStats[e.BombEvent.Player.SteamID64].impactPoints += 0.5
+			game.potentialRound.playerStats[e.BombEvent.Player.SteamID64].impactPoints += 0.5
 		}
 	})
 
@@ -796,7 +801,7 @@ func processDemo(demoName string) {
 			game.flags.prePlant = false
 			game.flags.postPlant = false
 			game.flags.postWinCon = true
-			game.rounds[0].playerStats[game.rounds[0].planter].impactPoints += 0.5
+			game.potentialRound.playerStats[game.potentialRound.planter].impactPoints += 0.5
 		}
 	})
 
@@ -895,7 +900,7 @@ func processDemo(demoName string) {
 				game.totalPlayerStats[steam].impactPoints += player.impactPoints
 				game.totalPlayerStats[steam].winPoints += player.winPoints
 
-				//game.rounds[0].teamStats[].points +=]
+				//game.potentialRound.teamStats[].points +=]
 
 			}
 		}
