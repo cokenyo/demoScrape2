@@ -43,10 +43,10 @@ var killValues = map[string]float64{
 }
 
 type game struct {
-	rounds           []*round
-	teams            map[int]*team
-	flags            flag
-	mapName          string
+	rounds []*round
+	teams  map[int]*team
+	flags  flag
+	mapName
 	tickRate         int
 	tickLength       uint64
 	roundsToWin      int //30 or 16
@@ -196,12 +196,7 @@ func processDemo(demoName string) {
 	game := initGameObject()
 
 	/*
-	   var players = new Array();
-	   var openingKill = true;
-	   var planter;
 	   var errLog = "";
-
-	   var debugLog = [];
 	*/
 
 	f, err := os.Open(demoName)
