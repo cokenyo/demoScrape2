@@ -18,6 +18,8 @@ import (
 
 const DEBUG = false
 
+//const suppressNormalOutput = false
+
 //globals
 const printChatLog = true
 const printDebugLog = true
@@ -89,6 +91,9 @@ type teamStats struct {
 	impactPoints float64
 	_4v5         int
 	_5v4         int
+
+	//kinda garbo
+	normalizer int
 }
 
 type round struct {
@@ -105,17 +110,19 @@ type round struct {
 	integrityCheck      bool
 	planter             uint64
 	defuser             uint64
+	serverNormalizer    int
+	serverImpactPoints  float64
 }
 
 type playerStats struct {
 	name    string
 	steamID uint64
 	teamID  int
+	side    int
 	rounds  int
 	//playerPoints float32
 	//teamPoints float32
 	damage         int
-	rating         float64
 	kills          uint8
 	assists        int8
 	deaths         int8
@@ -149,11 +156,32 @@ type playerStats struct {
 	impactPoints   float64
 	winPoints      float64
 	awpKills       int
+	RF             int
+	RA             int
+	nadesThrown    int
+	firesThrown    int
+	flashThrown    int
+	smokeThrown    int
 
 	//derived
+	utilThrown   int
 	atd          int
 	kast         float64
 	killPointAvg float64
+	iiwr         float64
+	adr          float64
+	kR           float64
+	tr           float64 //trade ratio
+	impactRating float64
+	rating       float64
+	ctRating     float64
+	tRating      float64
+
+	//side specific
+
+	//kinda garbo
+	teamsWinPoints      float64
+	winPointsNormalizer int
 
 	//"flags"
 	health             int
@@ -287,7 +315,7 @@ func processDemo(demoName string) {
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
 		for _, teamMember := range team.Members() {
-			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, teamID: team.ID(), health: 100, tradeList: make(map[uint64]int)}
+			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, side: int(team.Team()), teamID: team.ID(), health: 100, tradeList: make(map[uint64]int)}
 			currRoundObj.playerStats[player.steamID] = player
 		}
 	}
@@ -377,6 +405,7 @@ func processDemo(demoName string) {
 					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_5 = 1
 				}
 			} else if game.potentialRound.winnerENUM == 3 && game.flags.ctClutchSteam != 0 {
+				game.potentialRound.playerStats[game.flags.ctClutchSteam].impactPoints += clutchBonus[game.flags.ctClutchVal]
 				switch game.flags.ctClutchVal {
 				case 1:
 					game.potentialRound.playerStats[game.flags.ctClutchSteam].cl_1 = 1
@@ -403,6 +432,11 @@ func processDemo(demoName string) {
 				game.potentialRound.playerStats[player.steamID].impactPoints += player.killPoints
 				game.potentialRound.playerStats[player.steamID].impactPoints += float64(player.damage) / float64(250)
 				game.potentialRound.playerStats[player.steamID].impactPoints += multikillBonus[player.kills]
+
+				if player.name == "Brod1220" {
+					fmt.Println("damage points", float64(player.damage)/float64(250), "from this much dmg", player.damage)
+				}
+
 				switch player.kills {
 				case 2:
 					player._2k = 1
@@ -416,6 +450,14 @@ func processDemo(demoName string) {
 
 				if player.teamID == game.potentialRound.winnerENUM {
 					player.winPoints = player.impactPoints
+					player.RF = 1
+					if player.name == "Brod1220" {
+						debugMsg := fmt.Sprintf("---------%.2f win points for brod on round %d.------------\n", player.impactPoints, game.potentialRound.roundNum)
+						debugFile.WriteString(debugMsg)
+						debugFile.Sync()
+					}
+				} else {
+					player.RA = 1
 				}
 			}
 
@@ -561,13 +603,16 @@ func processDemo(demoName string) {
 				}
 
 				//check clutch start
+				fmt.Println("tAlive", game.flags.tAlive, "ctAlive", game.flags.ctAlive)
+
 				if !game.flags.postWinCon {
 					if game.flags.tAlive == 1 && game.flags.tClutchVal == 0 {
 						game.flags.tClutchVal = game.flags.ctAlive
 						membersT := p.GameState().TeamTerrorists().Members()
 						for _, terrorist := range membersT {
-							if terrorist.IsAlive() {
+							if terrorist.IsAlive() && e.Victim.SteamID64 != terrorist.SteamID64 {
 								game.flags.tClutchSteam = terrorist.SteamID64
+								fmt.Println("Clutch opportunity:", terrorist.Name, game.flags.tClutchVal)
 							}
 						}
 					}
@@ -575,8 +620,9 @@ func processDemo(demoName string) {
 						game.flags.ctClutchVal = game.flags.tAlive
 						membersCT := p.GameState().TeamCounterTerrorists().Members()
 						for _, counterTerrorist := range membersCT {
-							if counterTerrorist.IsAlive() {
+							if counterTerrorist.IsAlive() && e.Victim.SteamID64 != counterTerrorist.SteamID64 {
 								game.flags.ctClutchSteam = counterTerrorist.SteamID64
+								fmt.Println("Clutch opportunity:", counterTerrorist.Name, game.flags.ctClutchVal)
 							}
 						}
 					}
@@ -684,7 +730,6 @@ func processDemo(demoName string) {
 
 				} else if traded {
 					multiplier += 0.3
-					pS[e.Killer.SteamID64].trades += 1
 				}
 
 				if flashAssisted { //flash assisted kill
@@ -711,6 +756,11 @@ func processDemo(demoName string) {
 				killValue *= ecoMod
 
 				pS[e.Killer.SteamID64].killPoints += killValue
+				if e.Killer.Name == "Brod1220" && (game.potentialRound.roundNum == 7 || game.potentialRound.roundNum == 18) {
+					debugMsg := fmt.Sprintf("---------%.2f kill points for brod on round %d.------------\n", killValue, game.potentialRound.roundNum)
+					debugFile.WriteString(debugMsg)
+					debugFile.Sync()
+				}
 
 			}
 
@@ -761,11 +811,11 @@ func processDemo(demoName string) {
 				}
 
 			}
-			if flasher.Name != "" {
-				debugMsg := fmt.Sprintf("%s flashed %s for %.2f at %d. He was %f blind.\n", flasher, victim, blindTicks/128, int(tick), victim.FlashDuration)
-				debugFile.WriteString(debugMsg)
-				debugFile.Sync()
-			}
+			// if flasher.Name != "" {
+			// 	debugMsg := fmt.Sprintf("%s flashed %s for %.2f at %d. He was %f blind.\n", flasher, victim, blindTicks/128, int(tick), victim.FlashDuration)
+			// 	debugFile.WriteString(debugMsg)
+			// 	debugFile.Sync()
+			// }
 
 		}
 	})
@@ -776,10 +826,9 @@ func processDemo(demoName string) {
 
 	p.RegisterEventHandler(func(e events.BombPlanted) {
 		fmt.Printf("Bomb Planted\n")
-		if game.flags.isGameLive && game.flags.postWinCon == false {
+		if game.flags.isGameLive && !game.flags.postWinCon {
 			game.flags.prePlant = false
 			game.flags.postPlant = true
-			game.flags.postWinCon = false
 			game.flags.tMoney = true
 			game.potentialRound.planter = e.BombEvent.Player.SteamID64
 		}
@@ -807,6 +856,18 @@ func processDemo(demoName string) {
 
 	p.RegisterEventHandler(func(e events.GrenadeProjectileThrow) {
 		//fmt.Println("Grenade Thrown", e.Projectile.WeaponInstance.Type)
+		if game.flags.isGameLive {
+			if e.Projectile.WeaponInstance.Type == 506 {
+				game.potentialRound.playerStats[e.Projectile.Thrower.SteamID64].nadesThrown += 1
+			} else if e.Projectile.WeaponInstance.Type == 505 {
+				game.potentialRound.playerStats[e.Projectile.Thrower.SteamID64].smokeThrown += 1
+			} else if e.Projectile.WeaponInstance.Type == 504 {
+				game.potentialRound.playerStats[e.Projectile.Thrower.SteamID64].flashThrown += 1
+			} else if e.Projectile.WeaponInstance.Type == 502 || e.Projectile.WeaponInstance.Type == 503 {
+				game.potentialRound.playerStats[e.Projectile.Thrower.SteamID64].firesThrown += 1
+			}
+
+		}
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerDisconnected) {
@@ -851,69 +912,7 @@ func processDemo(demoName string) {
 	//----END OF MATCH PROCESSING----
 	//we want to iterate through rounds backwards to make sure their are no repeats
 
-	game.totalPlayerStats = make(map[uint64]*playerStats)
-
-	validRoundsMap := make(map[int8]bool)
-	for i := len(game.rounds) - 1; i >= 0; i-- {
-		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
-		if game.rounds[i].integrityCheck && !validRoundExists {
-			//this i-th round is good to add
-
-			validRoundsMap[game.rounds[i].roundNum] = true
-			//add to round master stats
-			fmt.Println(game.rounds[i].roundNum)
-			for steam, player := range (*game.rounds[i]).playerStats {
-				if game.totalPlayerStats[steam] == nil {
-					game.totalPlayerStats[steam] = &playerStats{name: player.name, steamID: player.steamID}
-				}
-				game.totalPlayerStats[steam].rounds += 1
-				game.totalPlayerStats[steam].kills += player.kills
-				game.totalPlayerStats[steam].assists += player.assists
-				game.totalPlayerStats[steam].deaths += player.deaths
-				game.totalPlayerStats[steam].damage += player.damage
-				game.totalPlayerStats[steam].ticksAlive += player.ticksAlive
-				game.totalPlayerStats[steam].deathPlacement += player.deathPlacement
-				game.totalPlayerStats[steam].trades += player.trades
-				game.totalPlayerStats[steam].traded += player.traded
-				game.totalPlayerStats[steam].ok += player.ok
-				game.totalPlayerStats[steam].ol += player.ol
-				game.totalPlayerStats[steam].killPoints += player.killPoints
-				game.totalPlayerStats[steam].cl_1 += player.cl_1
-				game.totalPlayerStats[steam].cl_2 += player.cl_2
-				game.totalPlayerStats[steam].cl_3 += player.cl_3
-				game.totalPlayerStats[steam].cl_4 += player.cl_4
-				game.totalPlayerStats[steam].cl_5 += player.cl_5
-				game.totalPlayerStats[steam]._2k += player._2k
-				game.totalPlayerStats[steam]._3k += player._3k
-				game.totalPlayerStats[steam]._4k += player._4k
-				game.totalPlayerStats[steam]._5k += player._5k
-				game.totalPlayerStats[steam].nadeDmg += player.nadeDmg
-				game.totalPlayerStats[steam].infernoDmg += player.infernoDmg
-				game.totalPlayerStats[steam].utilDmg += player.utilDmg
-				game.totalPlayerStats[steam].ef += player.ef
-				game.totalPlayerStats[steam].fAss += player.fAss
-				game.totalPlayerStats[steam].enemyFlashTime += player.enemyFlashTime
-				game.totalPlayerStats[steam].hs += player.hs
-				game.totalPlayerStats[steam].kastRounds += player.kastRounds
-				game.totalPlayerStats[steam].saves += player.saves
-				game.totalPlayerStats[steam].entries += player.entries
-				game.totalPlayerStats[steam].impactPoints += player.impactPoints
-				game.totalPlayerStats[steam].winPoints += player.winPoints
-
-				//game.potentialRound.teamStats[].points +=]
-
-			}
-		}
-	}
-
-	//check our shit
-	for _, player := range game.totalPlayerStats {
-		player.atd = player.ticksAlive / player.rounds / game.tickRate
-		player.deathPlacement = player.deathPlacement / float64(player.rounds)
-		player.kast = player.kastRounds / float64(player.rounds)
-		player.killPointAvg = player.killPoints / float64(player.kills)
-		fmt.Printf("%+v\n", player)
-	}
+	endOfMatchProcessing(game)
 
 	fmt.Println("Demo is complete!")
 	//cleanup()
