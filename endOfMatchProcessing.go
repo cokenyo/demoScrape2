@@ -22,7 +22,7 @@ func endOfMatchProcessing(game *game) {
 			fmt.Println(game.rounds[i].roundNum)
 			for steam, player := range (*game.rounds[i]).playerStats {
 				if game.totalPlayerStats[steam] == nil {
-					game.totalPlayerStats[steam] = &playerStats{name: player.name, steamID: player.steamID}
+					game.totalPlayerStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamID: player.teamID}
 				}
 				game.totalPlayerStats[steam].rounds += 1
 				game.totalPlayerStats[steam].kills += player.kills
@@ -151,4 +151,6 @@ func calculateDerivedFields(game *game) {
 	fmt.Println("deathRoundAvg", deathRoundAvg)
 	fmt.Println("kastRoundAvg", kastRoundAvg)
 	fmt.Println("adrAvg", adrAvg)
+
+	beginOutput(game)
 }

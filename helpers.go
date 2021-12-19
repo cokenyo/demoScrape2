@@ -9,3 +9,12 @@ func isDuringExpectedRound(game *game, p dem.Parser) bool {
 	isAfterWinCon := (int(game.potentialRound.roundNum) == p.GameState().TotalRoundsPlayed() && game.flags.postWinCon)
 	return (isPreWinCon || isAfterWinCon)
 }
+
+func intInSlice(a int, list []int) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}

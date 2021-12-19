@@ -46,15 +46,18 @@ var killValues = map[string]float64{
 }
 
 type game struct {
+	winnerID         int
 	rounds           []*round
 	potentialRound   *round
 	teams            map[int]*team
 	flags            flag
 	mapName          string
 	tickRate         int
-	tickLength       uint64
+	tickLength       int
 	roundsToWin      int //30 or 16
 	totalPlayerStats map[uint64]*playerStats
+	playerOrder      []uint64
+	teamOrder        []int
 }
 
 type flag struct {
@@ -83,7 +86,7 @@ type flag struct {
 type team struct {
 	id    int
 	name  string
-	score uint8
+	score int
 }
 
 type teamStats struct {
@@ -254,6 +257,8 @@ func processDemo(demoName string) {
 	game.tickRate = int(math.Round(p.TickRate()))
 	fmt.Println("Tick rate is", game.tickRate)
 
+	game.tickLength = header.PlaybackTicks
+
 	//creating a file to dump chat log into
 	fmt.Printf("Creating chatLog file.\n")
 	os.Mkdir("out", 0777)
@@ -370,6 +375,7 @@ func processDemo(demoName string) {
 		//set winner
 		game.potentialRound.winnerID = winnerID
 		game.teams[game.potentialRound.winnerID].score += 1
+		fmt.Println("We think this team won", game.teams[game.potentialRound.winnerID].name)
 		//check clutch
 
 	}
@@ -425,17 +431,12 @@ func processDemo(demoName string) {
 				if player.deaths == 0 {
 					player.kastRounds = 1
 					if player.teamID != game.potentialRound.winnerID {
-						fmt.Println("Player on team this saved:", player.teamID)
 						player.saves = 1
 					}
 				}
 				game.potentialRound.playerStats[player.steamID].impactPoints += player.killPoints
 				game.potentialRound.playerStats[player.steamID].impactPoints += float64(player.damage) / float64(250)
 				game.potentialRound.playerStats[player.steamID].impactPoints += multikillBonus[player.kills]
-
-				if player.name == "Brod1220" {
-					fmt.Println("damage points", float64(player.damage)/float64(250), "from this much dmg", player.damage)
-				}
 
 				switch player.kills {
 				case 2:
@@ -498,7 +499,9 @@ func processDemo(demoName string) {
 	})
 
 	p.RegisterEventHandler(func(e events.RoundEnd) {
-		fmt.Println("Round End", e.Winner, "won")
+		fmt.Println("Round End", e.WinnerState.ID(), "won")
+
+		fmt.Println("e.WinnerState.ID()", e.WinnerState.ID(), "and", "e.Winner", e.Winner, "and", "e.WinnerState.Team()", e.WinnerState.Team())
 
 		validWinner := true
 		if e.Winner < 2 {
@@ -510,18 +513,16 @@ func processDemo(demoName string) {
 		} else {
 			//we need to check if the game is over
 
-			test := (*(e.WinnerState)).ClanName()
-			fmt.Println(test, (*(e.WinnerState)).ID())
 		}
 
 		//we want to actually process the round
 		if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
 			game.potentialRound.winnerENUM = int(e.Winner)
-			processRoundOnWinCon((*(e.WinnerState)).ID())
+			processRoundOnWinCon(e.WinnerState.ID())
 
 			//check last round
-			roundWinnerScore := game.teams[(*(e.WinnerState)).ID()].score + 1
-			roundLoserScore := game.teams[(*(e.LoserState)).ID()].score
+			roundWinnerScore := game.teams[e.WinnerState.ID()].score + 1
+			roundLoserScore := game.teams[e.LoserState.ID()].score
 			fmt.Println("winner Rounds", roundWinnerScore)
 			fmt.Println("loser Rounds", roundLoserScore)
 
@@ -529,11 +530,13 @@ func processDemo(demoName string) {
 				//check for normal win
 				if roundWinnerScore == 16 && roundLoserScore < 15 {
 					//normal win
+					game.winnerID = game.potentialRound.winnerID
 					processRoundFinal(true)
 				} else if roundWinnerScore > 15 { //check for OT win
 					overtime := ((roundWinnerScore+roundLoserScore)-30-1)/6 + 1
 					//OT win
 					if (roundWinnerScore-15-1)/3 == overtime {
+						game.winnerID = game.potentialRound.winnerID
 						processRoundFinal(true)
 					}
 				}
@@ -541,9 +544,11 @@ func processDemo(demoName string) {
 				//check for normal win
 				if roundWinnerScore == 9 && roundLoserScore < 8 {
 					//normal win
+					game.winnerID = game.potentialRound.winnerID
 					processRoundFinal(true)
 				} else if roundWinnerScore == 8 && roundLoserScore == 8 { //check for tie
 					//tie
+					game.winnerID = game.potentialRound.winnerID
 					processRoundFinal(true)
 				}
 			}
@@ -603,7 +608,6 @@ func processDemo(demoName string) {
 				}
 
 				//check clutch start
-				fmt.Println("tAlive", game.flags.tAlive, "ctAlive", game.flags.ctAlive)
 
 				if !game.flags.postWinCon {
 					if game.flags.tAlive == 1 && game.flags.tClutchVal == 0 {
