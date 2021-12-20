@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 )
 
@@ -10,11 +13,24 @@ func isDuringExpectedRound(game *game, p dem.Parser) bool {
 	return (isPreWinCon || isAfterWinCon)
 }
 
-func intInSlice(a int, list []int) bool {
-	for _, b := range list {
-		if b == a {
-			return true
+func validateTeamName(game *game, teamName string) string {
+	name := ""
+	if strings.HasPrefix(teamName, "[") {
+		if len(teamName) == 31 {
+			//name here will be truncated
+			name = strings.Split(teamName, "] ")[1]
+			for _, team := range game.teams {
+				if strings.Contains(team.name, name) {
+					return team.name
+				}
+			}
+			fmt.Print("OH NOEY")
+			return name
+		} else {
+			name = strings.Split(teamName, "] ")[1]
+			return name
 		}
+	} else {
+		return teamName
 	}
-	return false
 }

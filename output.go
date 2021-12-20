@@ -25,7 +25,60 @@ func beginOutput(game *game) {
 	w := csv.NewWriter(outputFile)
 
 	records := [][]string{
-		{"m_ID", "Map", "Team", "Name", "Rating"},
+		{
+			"m_ID",
+			"Map",
+			"Team",
+			"Name",
+			"Rating",
+			"Kills",
+			"Assists",
+			"Deaths",
+			"ADR",
+			"KAST",
+			"Impact",
+			"CT",
+			"T",
+			"IWR",
+			"KPA",
+			"ADP",
+			"ATD",
+			"SuppX",
+			"SuppR",
+			"UD",
+			"EF",
+			"F_Ass",
+			"Util",
+			"HS",
+			"AWP_K",
+			"F_Kills",
+			"F_Deaths",
+			"Entries",
+			"Saves",
+			"Trades",
+			"Traded",
+			"2k",
+			"3k",
+			"4k",
+			"5k",
+			"1v1",
+			"1v2",
+			"1v3",
+			"1v4",
+			"1v5",
+			"Rounds",
+			"RF",
+			"RA",
+			"Damage",
+			"XTaken",
+			"Smokes",
+			"Flashes",
+			"Fires",
+			"Nades",
+			"FireX",
+			"NadeX",
+			"EFT",
+			"steam"},
 	}
 
 	teamA := []string{m_ID, game.mapName, "", game.teams[game.teamOrder[0]].name}
@@ -33,8 +86,62 @@ func beginOutput(game *game) {
 
 	for _, steam := range game.playerOrder {
 		player := game.totalPlayerStats[steam]
-		if player.teamID == game.teamOrder[0] {
-			playerOutput := []string{m_ID, game.mapName, game.teams[game.teamOrder[0]].name, player.name, fmt.Sprintf("%.2f", player.rating)}
+		if player.teamClanName == game.teamOrder[0] {
+			playerOutput := []string{
+				m_ID,
+				game.mapName,
+				game.teams[game.teamOrder[0]].name,
+				player.name,
+				fmt.Sprintf("%.2f", player.rating),
+				strconv.Itoa(int(player.kills)),
+				strconv.Itoa(int(player.assists)),
+				strconv.Itoa(int(player.deaths)),
+				strconv.Itoa(int(player.adr)),
+				fmt.Sprintf("%.2f", player.kast),
+				fmt.Sprintf("%.2f", player.impactRating),
+				fmt.Sprintf("%.2f", player.ctRating),
+				fmt.Sprintf("%.2f", player.tRating),
+				fmt.Sprintf("%.2f", player.iiwr),
+				fmt.Sprintf("%.2f", player.killPointAvg),
+				fmt.Sprintf("%.2f", player.deathPlacement),
+				strconv.Itoa(int(player.atd)),
+				"",
+				"",
+				strconv.Itoa(int(player.utilDmg)),
+				strconv.Itoa(int(player.ef)),
+				strconv.Itoa(int(player.fAss)),
+				strconv.Itoa(int(player.utilThrown)),
+				strconv.Itoa(int(player.hs)),
+				strconv.Itoa(int(player.awpKills)),
+				strconv.Itoa(int(player.ok)),
+				strconv.Itoa(int(player.ol)),
+				strconv.Itoa(int(player.entries)),
+				strconv.Itoa(int(player.saves)),
+				strconv.Itoa(int(player.trades)),
+				strconv.Itoa(int(player.traded)),
+				strconv.Itoa(int(player._2k)),
+				strconv.Itoa(int(player._3k)),
+				strconv.Itoa(int(player._4k)),
+				strconv.Itoa(int(player._5k)),
+				strconv.Itoa(int(player.cl_1)),
+				strconv.Itoa(int(player.cl_2)),
+				strconv.Itoa(int(player.cl_3)),
+				strconv.Itoa(int(player.cl_4)),
+				strconv.Itoa(int(player.cl_5)),
+				strconv.Itoa(int(player.rounds)),
+				strconv.Itoa(int(player.RF)),
+				strconv.Itoa(int(player.RA)),
+				strconv.Itoa(int(player.damage)),
+				strconv.Itoa(int(player.damageTaken)),
+				strconv.Itoa(int(player.smokeThrown)),
+				strconv.Itoa(int(player.flashThrown)),
+				strconv.Itoa(int(player.firesThrown)),
+				strconv.Itoa(int(player.nadesThrown)),
+				strconv.Itoa(int(player.infernoDmg)),
+				strconv.Itoa(int(player.nadeDmg)),
+				fmt.Sprintf("%.0f", player.enemyFlashTime),
+				strconv.Itoa(int(player.steamID)),
+			}
 			records = append(records, [][]string{playerOutput}...)
 		}
 	}
@@ -44,8 +151,62 @@ func beginOutput(game *game) {
 
 	for _, steam := range game.playerOrder {
 		player := game.totalPlayerStats[steam]
-		if player.teamID == game.teamOrder[1] {
-			playerOutput := []string{m_ID, game.mapName, game.teams[game.teamOrder[1]].name, player.name, fmt.Sprintf("%.2f", player.rating)}
+		if player.teamClanName == game.teamOrder[1] {
+			playerOutput := []string{
+				m_ID,
+				game.mapName,
+				game.teams[game.teamOrder[1]].name,
+				player.name,
+				fmt.Sprintf("%.2f", player.rating),
+				strconv.Itoa(int(player.kills)),
+				strconv.Itoa(int(player.assists)),
+				strconv.Itoa(int(player.deaths)),
+				strconv.Itoa(int(player.adr)),
+				fmt.Sprintf("%.2f", player.kast),
+				fmt.Sprintf("%.2f", player.impactRating),
+				fmt.Sprintf("%.2f", player.ctRating),
+				fmt.Sprintf("%.2f", player.tRating),
+				fmt.Sprintf("%.2f", player.iiwr),
+				fmt.Sprintf("%.2f", player.killPointAvg),
+				fmt.Sprintf("%.2f", player.deathPlacement),
+				strconv.Itoa(int(player.atd)),
+				"",
+				"",
+				strconv.Itoa(int(player.utilDmg)),
+				strconv.Itoa(int(player.ef)),
+				strconv.Itoa(int(player.fAss)),
+				strconv.Itoa(int(player.utilThrown)),
+				strconv.Itoa(int(player.hs)),
+				strconv.Itoa(int(player.awpKills)),
+				strconv.Itoa(int(player.ok)),
+				strconv.Itoa(int(player.ol)),
+				strconv.Itoa(int(player.entries)),
+				strconv.Itoa(int(player.saves)),
+				strconv.Itoa(int(player.trades)),
+				strconv.Itoa(int(player.traded)),
+				strconv.Itoa(int(player._2k)),
+				strconv.Itoa(int(player._3k)),
+				strconv.Itoa(int(player._4k)),
+				strconv.Itoa(int(player._5k)),
+				strconv.Itoa(int(player.cl_1)),
+				strconv.Itoa(int(player.cl_2)),
+				strconv.Itoa(int(player.cl_3)),
+				strconv.Itoa(int(player.cl_4)),
+				strconv.Itoa(int(player.cl_5)),
+				strconv.Itoa(int(player.rounds)),
+				strconv.Itoa(int(player.RF)),
+				strconv.Itoa(int(player.RA)),
+				strconv.Itoa(int(player.damage)),
+				strconv.Itoa(int(player.damageTaken)),
+				strconv.Itoa(int(player.smokeThrown)),
+				strconv.Itoa(int(player.flashThrown)),
+				strconv.Itoa(int(player.firesThrown)),
+				strconv.Itoa(int(player.nadesThrown)),
+				strconv.Itoa(int(player.infernoDmg)),
+				strconv.Itoa(int(player.nadeDmg)),
+				fmt.Sprintf("%.0f", player.enemyFlashTime),
+				strconv.Itoa(int(player.steamID)),
+			}
 			records = append(records, [][]string{playerOutput}...)
 		}
 	}
@@ -95,11 +256,11 @@ func randomizeHash(hashValue string, seedVal int) string {
 }
 
 func setDisplayOrders(game *game) {
-	if game.winnerID != 0 {
-		game.teamOrder = append(game.teamOrder, game.winnerID)
-		for teamID, _ := range game.teams {
-			if !intInSlice(teamID, game.teamOrder) {
-				game.teamOrder = append(game.teamOrder, teamID)
+	if game.winnerClanName != "" {
+		game.teamOrder = append(game.teamOrder, game.winnerClanName)
+		for _, team := range game.teams {
+			if game.teamOrder[0] != team.name {
+				game.teamOrder = append(game.teamOrder, team.name)
 			}
 		}
 	} else {
@@ -118,10 +279,10 @@ func setDisplayOrders(game *game) {
 		}
 	}
 
-	for _, teamID := range game.teamOrder {
+	for _, teamClanName := range game.teamOrder {
 		offset := len(game.playerOrder)
 		for steam, player := range game.totalPlayerStats {
-			if player.teamID == teamID {
+			if player.teamClanName == teamClanName {
 				if len(game.playerOrder) > offset {
 					//subsetI := len(game.playerOrder) - offset
 					for index, _ := range game.playerOrder[offset:] {
