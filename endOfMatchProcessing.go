@@ -111,8 +111,8 @@ func endOfMatchProcessing(game *game) {
 			}
 			for steam, player := range (*game.rounds[i]).playerStats {
 				game.totalPlayerStats[steam].teamsWinPoints += game.rounds[i].teamStats[player.teamClanName].winPoints
-				game.totalPlayerStats[steam].tWinPoints += game.rounds[i].teamStats[player.teamClanName].tWinPoints
-				game.totalPlayerStats[steam].ctWinPoints += game.rounds[i].teamStats[player.teamClanName].ctWinPoints
+				game.totalPlayerStats[steam].tTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].tWinPoints
+				game.totalPlayerStats[steam].ctTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].ctWinPoints
 			}
 		}
 	}
@@ -226,13 +226,13 @@ func calculateDerivedFields(game *game) {
 
 		ctImpactRating := 0.0
 		if player.ctTeamsWinPoints != 0 {
-			ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / impactRoundAvg)) + (0.3 * (playerWPR / (player.teamsWinPoints / float64(player.winPointsNormalizer))))
+			ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg)) + (0.3 * (playerWPR / (player.ctTeamsWinPoints / float64(player.ctWinPointsNormalizer))))
 		} else {
 			fmt.Println("UH 16-0?")
 			ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg))
 		}
 		playerDR = float64(player.ctDeaths) / float64(player.ctRounds)
-		player.ctRating = (0.3 * ctImpactRating) + (0.35 * ((float64(player.ctKills) / float64(player.ctRounds)) / killRoundAvg)) + (0.07 * (deathRoundAvg / playerDR)) + (0.08 * (player.ctKAST / kastRoundAvg)) + (0.2 * (player.ctADR / adrAvg))
+		player.ctRating = (0.3 * ctImpactRating) + (0.35 * ((float64(player.ctKills) / float64(player.ctRounds)) / ctKillRoundAvg)) + (0.07 * (ctDeathRoundAvg / playerDR)) + (0.08 * (player.ctKAST / ctKastRoundAvg)) + (0.2 * (player.ctADR / ctAdrAvg))
 
 		//tRating
 		openingFactor = (float64(player.tOK-player.tOL) / 13.0) + 1
@@ -241,13 +241,13 @@ func calculateDerivedFields(game *game) {
 
 		tImpactRating := 0.0
 		if player.tTeamsWinPoints != 0 {
-			tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / impactRoundAvg)) + (0.3 * (playerWPR / (player.teamsWinPoints / float64(player.winPointsNormalizer))))
+			tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg)) + (0.3 * (playerWPR / (player.tTeamsWinPoints / float64(player.tWinPointsNormalizer))))
 		} else {
 			fmt.Println("UH 16-0?")
 			tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg))
 		}
 		playerDR = float64(player.tDeaths) / float64(player.tRounds)
-		player.tRating = (0.3 * tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / killRoundAvg)) + (0.07 * (deathRoundAvg / playerDR)) + (0.08 * (player.tKAST / kastRoundAvg)) + (0.2 * (player.tADR / adrAvg))
+		player.tRating = (0.3 * tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / tKillRoundAvg)) + (0.07 * (tDeathRoundAvg / playerDR)) + (0.08 * (player.tKAST / tKastRoundAvg)) + (0.2 * (player.tADR / tAdrAvg))
 
 		fmt.Println("openingFactor", (0.1 * float64(openingFactor)))
 		fmt.Println("playerIPR", (0.6 * (playerIPR / impactRoundAvg)))
