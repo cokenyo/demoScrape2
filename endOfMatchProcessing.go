@@ -65,6 +65,9 @@ func endOfMatchProcessing(game *game) {
 				game.totalPlayerStats[steam].flashThrown += player.flashThrown
 				game.totalPlayerStats[steam].firesThrown += player.firesThrown
 				game.totalPlayerStats[steam].damageTaken += player.damageTaken
+				game.totalPlayerStats[steam].suppDamage += player.suppDamage
+				game.totalPlayerStats[steam].suppRounds += player.suppRounds
+				game.totalPlayerStats[steam].rwk += player.rwk
 
 				if player.side == 2 {
 					game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initTerroristCount
@@ -76,6 +79,7 @@ func endOfMatchProcessing(game *game) {
 					game.totalPlayerStats[steam].tDeaths += player.deaths
 					game.totalPlayerStats[steam].tKASTRounds += player.kastRounds
 					game.totalPlayerStats[steam].tDamage += player.damage
+					game.totalPlayerStats[steam].tADP += player.deathPlacement
 					//game.totalPlayerStats[steam].tTeamsWinPoints +=
 					game.totalPlayerStats[steam].tWinPointsNormalizer += game.rounds[i].initTerroristCount
 					game.totalPlayerStats[steam].tRounds += 1
@@ -92,6 +96,7 @@ func endOfMatchProcessing(game *game) {
 					game.totalPlayerStats[steam].ctDeaths += player.deaths
 					game.totalPlayerStats[steam].ctKASTRounds += player.kastRounds
 					game.totalPlayerStats[steam].ctDamage += player.damage
+					game.totalPlayerStats[steam].ctADP += player.deathPlacement
 					//game.totalPlayerStats[steam].tTeamsWinPoints +=
 					game.totalPlayerStats[steam].ctWinPointsNormalizer += game.rounds[i].initCTerroristCount
 					game.totalPlayerStats[steam].ctRounds += 1
@@ -143,7 +148,7 @@ func calculateDerivedFields(game *game) {
 	for _, player := range game.totalPlayerStats {
 
 		player.atd = player.ticksAlive / player.rounds / game.tickRate
-		player.deathPlacement = player.deathPlacement / float64(player.rounds)
+		player.deathPlacement = player.deathPlacement / float64(player.deaths)
 		player.kast = player.kastRounds / float64(player.rounds)
 		player.killPointAvg = player.killPoints / float64(player.kills)
 		player.iiwr = player.winPoints / player.impactPoints
@@ -156,6 +161,8 @@ func calculateDerivedFields(game *game) {
 		player.tADR = float64(player.tDamage) / float64(player.tRounds)
 		player.tKAST = player.tKASTRounds / float64(player.tRounds)
 		player.ctKAST = player.ctKASTRounds / float64(player.ctRounds)
+		player.tADP = player.tADP / float64(player.tDeaths)
+		player.ctADP = player.ctADP / float64(player.ctDeaths)
 
 		roundNormalizer += player.rounds
 		impactRoundAvg += player.impactPoints

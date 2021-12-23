@@ -14,9 +14,10 @@ import (
 )
 
 //TODO
-//"Catch up on the score"
+//"Catch up on the score" - dont remember what this is lol
 //clean up T and CT ratings some (purely compare in that subset of rounds)
 //add verification for if a round event has triggered so far in the round (avoid double roundEnds)
+//add team stats calculations
 
 const DEBUG = false
 
@@ -178,6 +179,9 @@ type playerStats struct {
 	flashThrown    int
 	smokeThrown    int
 	damageTaken    int
+	suppRounds     int
+	suppDamage     int
+	rwk            int
 
 	//derived
 	utilThrown   int
@@ -221,6 +225,8 @@ type playerStats struct {
 	ctRounds              int
 	ctRating              float64
 	tRating               float64
+	tADP                  float64
+	ctADP                 float64
 
 	//kinda garbo
 	teamsWinPoints      float64
@@ -231,6 +237,7 @@ type playerStats struct {
 	tradeList          map[uint64]int
 	mostRecentFlasher  uint64
 	mostRecentFlashVal float64
+	damageList         map[uint64]int
 }
 
 func main() {
@@ -240,7 +247,7 @@ func main() {
 	//	go processDemo("faceit1.dem")
 	//}
 
-	processDemo("faceit1.dem")
+	processDemo("league1.dem")
 
 	var input string
 	fmt.Scanln(&input)
@@ -360,7 +367,7 @@ func processDemo(demoName string) {
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
 		for _, teamMember := range team.Members() {
-			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int)}
+			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
 			currRoundObj.playerStats[player.steamID] = player
 		}
 	}
@@ -640,11 +647,23 @@ func processDemo(demoName string) {
 				if e.Victim.Team == 2 {
 					game.flags.tAlive -= 1
 					pS[e.Victim.SteamID64].deathPlacement = float64(game.potentialRound.initTerroristCount - game.flags.tAlive)
+					//pS[e.Victim.SteamID64].tADP = float64(game.potentialRound.initTerroristCount - game.flags.tAlive)
 				} else if e.Victim.Team == 3 {
 					game.flags.ctAlive -= 1
 					pS[e.Victim.SteamID64].deathPlacement = float64(game.potentialRound.initCTerroristCount - game.flags.ctAlive)
+					//pS[e.Victim.SteamID64].ctADP = float64(game.potentialRound.initCTerroristCount - game.flags.ctAlive)
 				} else {
 					//else log an error
+				}
+
+				//add support damage
+				for suppSteam, suppDMG := range pS[e.Victim.SteamID64].damageList {
+					if killerExists && suppSteam != e.Killer.SteamID64 {
+						pS[suppSteam].suppDamage += suppDMG
+					} else if !killerExists {
+						pS[suppSteam].suppDamage += suppDMG
+					}
+
 				}
 
 				//check clutch start
@@ -686,9 +705,15 @@ func processDemo(demoName string) {
 				//this logic needs to be replaced
 				pS[e.Assister.SteamID64].assists += 1
 				pS[e.Assister.SteamID64].kastRounds = 1
+				pS[e.Assister.SteamID64].suppRounds = 1
 				assisted = true
 				if e.AssistedFlash {
 					pS[e.Assister.SteamID64].fAss += 1
+					flashAssisted = true
+				} else if float64(p.GameState().IngameTick()) < pS[e.Victim.SteamID64].mostRecentFlashVal {
+					//this will trigger if there is both a flash assist and a damage assist
+					pS[pS[e.Victim.SteamID64].mostRecentFlasher].fAss += 1
+					pS[pS[e.Victim.SteamID64].mostRecentFlasher].suppRounds = 1
 					flashAssisted = true
 				}
 
@@ -698,6 +723,7 @@ func processDemo(demoName string) {
 			if killerExists && victimExists && e.Killer.TeamState.ID() != e.Victim.TeamState.ID() {
 				pS[e.Killer.SteamID64].kills += 1
 				pS[e.Killer.SteamID64].kastRounds = 1
+				pS[e.Killer.SteamID64].rwk = 1
 				pS[e.Killer.SteamID64].tradeList[e.Victim.SteamID64] = tick
 				if e.Weapon.Type == 309 {
 					pS[e.Killer.SteamID64].awpKills += 1
@@ -829,6 +855,10 @@ func processDemo(demoName string) {
 			}
 			if e.Player != nil && e.Attacker != nil && e.Player.Team != e.Attacker.Team {
 				game.potentialRound.playerStats[e.Attacker.SteamID64].damage += e.HealthDamageTaken
+
+				//add to damage list for supp damage calc
+				game.potentialRound.playerStats[e.Player.SteamID64].damageList[e.Attacker.SteamID64] += e.HealthDamageTaken
+
 				if equipment >= 500 && equipment <= 506 {
 					game.potentialRound.playerStats[e.Attacker.SteamID64].utilDmg += e.HealthDamageTaken
 					if equipment == 506 {

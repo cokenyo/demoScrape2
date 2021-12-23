@@ -43,8 +43,8 @@ func beginOutput(game *game) {
 			"KPA",
 			"ADP",
 			"ATD",
-			"SuppX",
 			"SuppR",
+			"SuppX",
 			"UD",
 			"EF",
 			"F_Ass",
@@ -71,6 +71,8 @@ func beginOutput(game *game) {
 			"RA",
 			"Damage",
 			"XTaken",
+			"ADP-CT",
+			"ADP-T",
 			"Smokes",
 			"Flashes",
 			"Fires",
@@ -78,7 +80,9 @@ func beginOutput(game *game) {
 			"FireX",
 			"NadeX",
 			"EFT",
-			"steam"},
+			"RWK",
+			//"steam",
+		},
 	}
 
 	teamA := []string{m_ID, game.mapName, "", game.teams[game.teamOrder[0]].name}
@@ -105,8 +109,8 @@ func beginOutput(game *game) {
 				fmt.Sprintf("%.2f", player.killPointAvg),
 				fmt.Sprintf("%.2f", player.deathPlacement),
 				strconv.Itoa(int(player.atd)),
-				"",
-				"",
+				strconv.Itoa(int(player.suppRounds)),
+				strconv.Itoa(int(player.suppDamage)),
 				strconv.Itoa(int(player.utilDmg)),
 				strconv.Itoa(int(player.ef)),
 				strconv.Itoa(int(player.fAss)),
@@ -133,6 +137,8 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.RA)),
 				strconv.Itoa(int(player.damage)),
 				strconv.Itoa(int(player.damageTaken)),
+				fmt.Sprintf("%.2f", player.ctADP),
+				fmt.Sprintf("%.2f", player.tADP),
 				strconv.Itoa(int(player.smokeThrown)),
 				strconv.Itoa(int(player.flashThrown)),
 				strconv.Itoa(int(player.firesThrown)),
@@ -140,7 +146,8 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.infernoDmg)),
 				strconv.Itoa(int(player.nadeDmg)),
 				fmt.Sprintf("%.0f", player.enemyFlashTime),
-				strconv.Itoa(int(player.steamID)),
+				strconv.Itoa(int(player.rwk)),
+				//strconv.FormatUint(player.steamID, 10),
 			}
 			records = append(records, [][]string{playerOutput}...)
 		}
@@ -170,8 +177,8 @@ func beginOutput(game *game) {
 				fmt.Sprintf("%.2f", player.killPointAvg),
 				fmt.Sprintf("%.2f", player.deathPlacement),
 				strconv.Itoa(int(player.atd)),
-				"",
-				"",
+				strconv.Itoa(int(player.suppRounds)),
+				strconv.Itoa(int(player.suppDamage)),
 				strconv.Itoa(int(player.utilDmg)),
 				strconv.Itoa(int(player.ef)),
 				strconv.Itoa(int(player.fAss)),
@@ -198,6 +205,8 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.RA)),
 				strconv.Itoa(int(player.damage)),
 				strconv.Itoa(int(player.damageTaken)),
+				fmt.Sprintf("%.2f", player.ctADP),
+				fmt.Sprintf("%.2f", player.tADP),
 				strconv.Itoa(int(player.smokeThrown)),
 				strconv.Itoa(int(player.flashThrown)),
 				strconv.Itoa(int(player.firesThrown)),
@@ -205,7 +214,8 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.infernoDmg)),
 				strconv.Itoa(int(player.nadeDmg)),
 				fmt.Sprintf("%.0f", player.enemyFlashTime),
-				strconv.Itoa(int(player.steamID)),
+				strconv.Itoa(int(player.rwk)),
+				//strconv.FormatUint(player.steamID, 10),
 			}
 			records = append(records, [][]string{playerOutput}...)
 		}
