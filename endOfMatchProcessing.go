@@ -8,6 +8,7 @@ import (
 func endOfMatchProcessing(game *game) {
 
 	game.totalPlayerStats = make(map[uint64]*playerStats)
+	game.totalTeamStats = make(map[string]*teamStats)
 
 	validRoundsMap := make(map[int8]bool)
 	for i := len(game.rounds) - 1; i >= 0; i-- {
@@ -17,6 +18,24 @@ func endOfMatchProcessing(game *game) {
 
 			validRoundsMap[game.rounds[i].roundNum] = true
 			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
+
+			for teamName, team := range game.rounds[i].teamStats {
+				if game.totalTeamStats[teamName] == nil {
+					game.totalTeamStats[teamName] = &teamStats{}
+				}
+				game.totalTeamStats[teamName].pistols += team.pistols
+				game.totalTeamStats[teamName].pistolsW += team.pistolsW
+				game.totalTeamStats[teamName]._4v5s += team._4v5s
+				game.totalTeamStats[teamName]._4v5w += team._4v5w
+				game.totalTeamStats[teamName]._5v4s += team._5v4s
+				game.totalTeamStats[teamName]._5v4w += team._5v4w
+				game.totalTeamStats[teamName].saves += team.saves
+				game.totalTeamStats[teamName].clutches += team.clutches
+				game.totalTeamStats[teamName].ctR += team.ctR
+				game.totalTeamStats[teamName].ctRW += team.ctRW
+				game.totalTeamStats[teamName].tR += team.tR
+				game.totalTeamStats[teamName].tRW += team.tRW
+			}
 
 			//add to round master stats
 			fmt.Println(game.rounds[i].roundNum)
@@ -83,6 +102,7 @@ func endOfMatchProcessing(game *game) {
 					//game.totalPlayerStats[steam].tTeamsWinPoints +=
 					game.totalPlayerStats[steam].tWinPointsNormalizer += game.rounds[i].initTerroristCount
 					game.totalPlayerStats[steam].tRounds += 1
+					game.totalPlayerStats[steam].tRF += player.RF
 
 					game.rounds[i].teamStats[player.teamClanName].tWinPoints += player.winPoints
 					game.rounds[i].teamStats[player.teamClanName].tImpactPoints += player.impactPoints
@@ -100,6 +120,7 @@ func endOfMatchProcessing(game *game) {
 					//game.totalPlayerStats[steam].tTeamsWinPoints +=
 					game.totalPlayerStats[steam].ctWinPointsNormalizer += game.rounds[i].initCTerroristCount
 					game.totalPlayerStats[steam].ctRounds += 1
+					game.totalPlayerStats[steam].ctAWP += player.ctAWP
 
 					game.rounds[i].teamStats[player.teamClanName].ctWinPoints += player.winPoints
 					game.rounds[i].teamStats[player.teamClanName].ctImpactPoints += player.impactPoints
@@ -115,6 +136,15 @@ func endOfMatchProcessing(game *game) {
 				game.totalPlayerStats[steam].ctTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].ctWinPoints
 			}
 		}
+	}
+
+	for _, player := range game.totalPlayerStats {
+		game.totalTeamStats[player.teamClanName].util += player.smokeThrown + player.flashThrown + player.nadesThrown + player.firesThrown
+		game.totalTeamStats[player.teamClanName].ud += player.utilDmg
+		game.totalTeamStats[player.teamClanName].ef += player.ef
+		game.totalTeamStats[player.teamClanName].fass += player.fAss
+		game.totalTeamStats[player.teamClanName].traded += player.traded
+		game.totalTeamStats[player.teamClanName].deaths += int(player.deaths)
 	}
 
 	calculateDerivedFields(game)

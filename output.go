@@ -18,7 +18,9 @@ func beginOutput(game *game) {
 	m_ID := createHash(game)
 	fmt.Println("M_ID", m_ID)
 
-	outputFile, outputFileErr := os.Create("out/gameStats.csv")
+	csvName := "out/" + m_ID + ".csv"
+
+	outputFile, outputFileErr := os.Create(csvName)
 	if outputFileErr != nil {
 		fmt.Println("OH NOE")
 	}
@@ -29,6 +31,7 @@ func beginOutput(game *game) {
 			"m_ID",
 			"Map",
 			"Team",
+			"steam",
 			"Name",
 			"Rating",
 			"Kills",
@@ -39,10 +42,7 @@ func beginOutput(game *game) {
 			"Impact",
 			"CT",
 			"T",
-			"IWR",
-			"KPA",
 			"ADP",
-			"ATD",
 			"SuppR",
 			"SuppX",
 			"UD",
@@ -71,6 +71,7 @@ func beginOutput(game *game) {
 			"RA",
 			"Damage",
 			"XTaken",
+			"ATD",
 			"ADP-CT",
 			"ADP-T",
 			"Smokes",
@@ -81,11 +82,19 @@ func beginOutput(game *game) {
 			"NadeX",
 			"EFT",
 			"RWK",
-			//"steam",
+			"IWR",
+			"KPA",
+			"tOL",
+			"ctOK",
+			"ctOL",
+			"tRounds",
+			"tRF",
+			"ctAWP",
+			"ctK",
 		},
 	}
 
-	teamA := []string{m_ID, game.mapName, "", game.teams[game.teamOrder[0]].name}
+	teamA := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[0]].name, "", "1", "", "", "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[0]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[0]].score)}
 	records = append(records, [][]string{teamA}...)
 
 	for _, steam := range game.playerOrder {
@@ -95,6 +104,7 @@ func beginOutput(game *game) {
 				m_ID,
 				game.mapName,
 				game.teams[game.teamOrder[0]].name,
+				"sid" + strconv.FormatUint(player.steamID, 10),
 				player.name,
 				fmt.Sprintf("%.2f", player.rating),
 				strconv.Itoa(int(player.kills)),
@@ -105,10 +115,7 @@ func beginOutput(game *game) {
 				fmt.Sprintf("%.2f", player.impactRating),
 				fmt.Sprintf("%.2f", player.ctRating),
 				fmt.Sprintf("%.2f", player.tRating),
-				fmt.Sprintf("%.2f", player.iiwr),
-				fmt.Sprintf("%.2f", player.killPointAvg),
 				fmt.Sprintf("%.2f", player.deathPlacement),
-				strconv.Itoa(int(player.atd)),
 				strconv.Itoa(int(player.suppRounds)),
 				strconv.Itoa(int(player.suppDamage)),
 				strconv.Itoa(int(player.utilDmg)),
@@ -137,6 +144,7 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.RA)),
 				strconv.Itoa(int(player.damage)),
 				strconv.Itoa(int(player.damageTaken)),
+				strconv.Itoa(int(player.atd)),
 				fmt.Sprintf("%.2f", player.ctADP),
 				fmt.Sprintf("%.2f", player.tADP),
 				strconv.Itoa(int(player.smokeThrown)),
@@ -147,13 +155,21 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.nadeDmg)),
 				fmt.Sprintf("%.0f", player.enemyFlashTime),
 				strconv.Itoa(int(player.rwk)),
-				//strconv.FormatUint(player.steamID, 10),
+				fmt.Sprintf("%.2f", player.iiwr),
+				fmt.Sprintf("%.2f", player.killPointAvg),
+				strconv.Itoa(int(player.tOL)),
+				strconv.Itoa(int(player.ctOK)),
+				strconv.Itoa(int(player.ctOL)),
+				strconv.Itoa(int(player.tRounds)),
+				strconv.Itoa(int(player.tRF)),
+				strconv.Itoa(int(player.ctAWP)),
+				strconv.Itoa(int(player.ctKills)),
 			}
 			records = append(records, [][]string{playerOutput}...)
 		}
 	}
 
-	teamB := []string{m_ID, game.mapName, "", game.teams[game.teamOrder[1]].name}
+	teamB := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[1]].name, "", "", "", "1", "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[1]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[1]].score)}
 	records = append(records, [][]string{teamB}...)
 
 	for _, steam := range game.playerOrder {
@@ -163,6 +179,7 @@ func beginOutput(game *game) {
 				m_ID,
 				game.mapName,
 				game.teams[game.teamOrder[1]].name,
+				"sid" + strconv.FormatUint(player.steamID, 10),
 				player.name,
 				fmt.Sprintf("%.2f", player.rating),
 				strconv.Itoa(int(player.kills)),
@@ -173,10 +190,7 @@ func beginOutput(game *game) {
 				fmt.Sprintf("%.2f", player.impactRating),
 				fmt.Sprintf("%.2f", player.ctRating),
 				fmt.Sprintf("%.2f", player.tRating),
-				fmt.Sprintf("%.2f", player.iiwr),
-				fmt.Sprintf("%.2f", player.killPointAvg),
 				fmt.Sprintf("%.2f", player.deathPlacement),
-				strconv.Itoa(int(player.atd)),
 				strconv.Itoa(int(player.suppRounds)),
 				strconv.Itoa(int(player.suppDamage)),
 				strconv.Itoa(int(player.utilDmg)),
@@ -205,6 +219,7 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.RA)),
 				strconv.Itoa(int(player.damage)),
 				strconv.Itoa(int(player.damageTaken)),
+				strconv.Itoa(int(player.atd)),
 				fmt.Sprintf("%.2f", player.ctADP),
 				fmt.Sprintf("%.2f", player.tADP),
 				strconv.Itoa(int(player.smokeThrown)),
@@ -215,7 +230,15 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.nadeDmg)),
 				fmt.Sprintf("%.0f", player.enemyFlashTime),
 				strconv.Itoa(int(player.rwk)),
-				//strconv.FormatUint(player.steamID, 10),
+				fmt.Sprintf("%.2f", player.iiwr),
+				fmt.Sprintf("%.2f", player.killPointAvg),
+				strconv.Itoa(int(player.tOL)),
+				strconv.Itoa(int(player.ctOK)),
+				strconv.Itoa(int(player.ctOL)),
+				strconv.Itoa(int(player.tRounds)),
+				strconv.Itoa(int(player.tRF)),
+				strconv.Itoa(int(player.ctAWP)),
+				strconv.Itoa(int(player.ctKills)),
 			}
 			records = append(records, [][]string{playerOutput}...)
 		}

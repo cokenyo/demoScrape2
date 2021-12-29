@@ -15,9 +15,13 @@ import (
 
 //TODO
 //"Catch up on the score" - dont remember what this is lol
-//clean up T and CT ratings some (purely compare in that subset of rounds)
+//convert rating calculations to a function
 //add verification for if a round event has triggered so far in the round (avoid double roundEnds)
 //add team stats calculations
+//check for game start without pistol (if we have bad demo)
+//create a outputPlayer function to clean up output.go
+//actually use killValues lmao
+//add another supp round qualifier: 60 supp dmg in round
 
 const DEBUG = false
 
@@ -60,8 +64,10 @@ type game struct {
 	tickLength       int
 	roundsToWin      int //30 or 16
 	totalPlayerStats map[uint64]*playerStats
+	totalTeamStats   map[string]*teamStats
 	playerOrder      []uint64
 	teamOrder        []string
+	totalRounds      int
 }
 
 type flag struct {
@@ -104,6 +110,20 @@ type teamStats struct {
 	_4v5s          int
 	_5v4w          int
 	_5v4s          int
+	pistols        int
+	pistolsW       int
+	saves          int
+	clutches       int
+	traded         int
+	fass           int
+	ef             int
+	ud             int
+	util           int
+	ctR            int
+	ctRW           int
+	tR             int
+	tRW            int
+	deaths         int
 
 	//kinda garbo
 	normalizer int
@@ -228,6 +248,9 @@ type playerStats struct {
 	tADP                  float64
 	ctADP                 float64
 
+	tRF   int
+	ctAWP int
+
 	//kinda garbo
 	teamsWinPoints      float64
 	winPointsNormalizer int
@@ -247,7 +270,7 @@ func main() {
 	//	go processDemo("faceit1.dem")
 	//}
 
-	processDemo("league1.dem")
+	processDemo("oc3.dem")
 
 	var input string
 	fmt.Scanln(&input)
@@ -388,8 +411,8 @@ func processDemo(demoName string) {
 		initTeamPlayer(counterTerrorists, newRound)
 
 		//set teams in teamStats for the round
-		newRound.teamStats[validateTeamName(game, p.GameState().TeamTerrorists().ClanName())] = &teamStats{}
-		newRound.teamStats[validateTeamName(game, p.GameState().TeamCounterTerrorists().ClanName())] = &teamStats{}
+		newRound.teamStats[validateTeamName(game, p.GameState().TeamTerrorists().ClanName())] = &teamStats{tR: 1}
+		newRound.teamStats[validateTeamName(game, p.GameState().TeamCounterTerrorists().ClanName())] = &teamStats{ctR: 1}
 
 		// Reset round
 		game.potentialRound = newRound
@@ -432,6 +455,7 @@ func processDemo(demoName string) {
 		game.flags.roundIntegrityEndOfficial = p.GameState().TotalRoundsPlayed()
 		if lastRound {
 			game.flags.roundIntegrityEndOfficial += 1
+			game.totalRounds = game.flags.roundIntegrityEndOfficial
 		}
 		fmt.Println("We are processing round final stuff", game.flags.roundIntegrityEndOfficial)
 		fmt.Println(len(game.rounds))
@@ -440,10 +464,24 @@ func processDemo(demoName string) {
 		if game.flags.roundIntegrityStart == game.flags.roundIntegrityEnd && game.flags.roundIntegrityEnd == game.flags.roundIntegrityEndOfficial {
 			game.potentialRound.integrityCheck = true
 
-			//check saves
+			//check team stats
+			if game.potentialRound.teamStats[game.potentialRound.winnerClanName].pistols == 1 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName].pistolsW = 1
+			}
+			if game.potentialRound.teamStats[game.potentialRound.winnerClanName]._4v5s == 1 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName]._4v5w = 1
+			} else if game.potentialRound.teamStats[game.potentialRound.winnerClanName]._5v4s == 1 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName]._5v4w = 1
+			}
+			if game.potentialRound.teamStats[game.potentialRound.winnerClanName].tR == 1 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName].tRW = 1
+			} else if game.potentialRound.teamStats[game.potentialRound.winnerClanName].ctR == 1 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName].ctRW = 1
+			}
 
 			//set the clutch
 			if game.potentialRound.winnerENUM == 2 && game.flags.tClutchSteam != 0 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName].clutches = 1
 				game.potentialRound.playerStats[game.flags.tClutchSteam].impactPoints += clutchBonus[game.flags.tClutchVal]
 				switch game.flags.tClutchVal {
 				case 1:
@@ -458,6 +496,7 @@ func processDemo(demoName string) {
 					game.potentialRound.playerStats[game.flags.tClutchSteam].cl_5 = 1
 				}
 			} else if game.potentialRound.winnerENUM == 3 && game.flags.ctClutchSteam != 0 {
+				game.potentialRound.teamStats[game.potentialRound.winnerClanName].clutches = 1
 				game.potentialRound.playerStats[game.flags.ctClutchSteam].impactPoints += clutchBonus[game.flags.ctClutchVal]
 				switch game.flags.ctClutchVal {
 				case 1:
@@ -479,6 +518,7 @@ func processDemo(demoName string) {
 					player.kastRounds = 1
 					if player.teamENUM != game.potentialRound.winnerENUM {
 						player.saves = 1
+						game.potentialRound.teamStats[player.teamClanName].saves = 1
 					}
 				}
 				game.potentialRound.playerStats[player.steamID].impactPoints += player.killPoints
@@ -525,15 +565,20 @@ func processDemo(demoName string) {
 
 	p.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
 		fmt.Printf("Round Freeze Time End\n")
+		pistol := false
 
 		//we are going to check to see if the first pistol is actually starting
 		membersT := p.GameState().TeamTerrorists().Members()
 		membersCT := p.GameState().TeamCounterTerrorists().Members()
 		if len(membersT) != 0 && len(membersCT) != 0 {
 			if membersT[0].Money()+membersT[0].MoneySpentThisRound() == 800 && membersCT[0].Money()+membersCT[0].MoneySpentThisRound() == 800 {
+				//start the game
 				if !game.flags.hasGameStarted {
 					initGameStart()
 				}
+
+				//track the pistol
+				pistol = true
 			}
 		}
 		fmt.Println("Has the Game Started?", game.flags.hasGameStarted)
@@ -541,6 +586,12 @@ func processDemo(demoName string) {
 		if game.flags.isGameLive {
 			//init round stats
 			initRound()
+			if pistol {
+				for _, team := range game.potentialRound.teamStats {
+					team.pistols = 1
+				}
+			}
+
 		}
 
 	})
@@ -656,12 +707,30 @@ func processDemo(demoName string) {
 					//else log an error
 				}
 
+				//do 4v5 calc
+				if game.flags.openingKill && game.potentialRound.initCTerroristCount+game.potentialRound.initTerroristCount == 10 {
+					//the 10th player died
+					_4v5Team := pS[e.Victim.SteamID64].teamClanName
+					game.potentialRound.teamStats[_4v5Team]._4v5s = 1
+					for teamName, team := range game.potentialRound.teamStats {
+						if teamName != _4v5Team {
+							team._5v4s = 1
+						}
+					}
+				}
+
 				//add support damage
 				for suppSteam, suppDMG := range pS[e.Victim.SteamID64].damageList {
 					if killerExists && suppSteam != e.Killer.SteamID64 {
 						pS[suppSteam].suppDamage += suppDMG
+						if pS[suppSteam].suppDamage > 60 {
+							pS[suppSteam].suppRounds = 1
+						}
 					} else if !killerExists {
 						pS[suppSteam].suppDamage += suppDMG
+						if pS[suppSteam].suppDamage > 60 {
+							pS[suppSteam].suppRounds = 1
+						}
 					}
 
 				}
@@ -727,6 +796,9 @@ func processDemo(demoName string) {
 				pS[e.Killer.SteamID64].tradeList[e.Victim.SteamID64] = tick
 				if e.Weapon.Type == 309 {
 					pS[e.Killer.SteamID64].awpKills += 1
+					if e.Killer.Team == 3 {
+						pS[e.Killer.SteamID64].ctAWP += 1
+					}
 				}
 				if e.IsHeadshot {
 					pS[e.Killer.SteamID64].hs += 1
