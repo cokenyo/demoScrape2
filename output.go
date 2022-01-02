@@ -94,6 +94,7 @@ func beginOutput(game *game) {
 		},
 	}
 
+	//this shit needa die
 	teamA := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[0]].name, "", "1", "", "", "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[0]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[0]].score)}
 	records = append(records, [][]string{teamA}...)
 
@@ -244,6 +245,7 @@ func beginOutput(game *game) {
 		}
 	}
 
+	//this shit needa die
 	result := "" + game.teams[game.teamOrder[0]].name + " " + strconv.Itoa(game.teams[game.teamOrder[0]].score) + " - " + strconv.Itoa(game.teams[game.teamOrder[1]].score) + " " + game.teams[game.teamOrder[1]].name
 	resultLine := []string{"1", game.mapName, result}
 	records = append(records, [][]string{resultLine}...)

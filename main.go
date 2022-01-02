@@ -15,13 +15,18 @@ import (
 
 //TODO
 //"Catch up on the score" - dont remember what this is lol
-//convert rating calculations to a function
+
+//FUNCTIONAL CHANGES
 //add verification for if a round event has triggered so far in the round (avoid double roundEnds)
-//add team stats calculations
 //check for game start without pistol (if we have bad demo)
+//Add backend support
+//Add lurker/anchor stuff
+//Add team economy round stats (ecos, forces, etc)
+
+//CLEAN CODE
 //create a outputPlayer function to clean up output.go
+//convert rating calculations to a function
 //actually use killValues lmao
-//add another supp round qualifier: 60 supp dmg in round
 
 const DEBUG = false
 
