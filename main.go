@@ -276,6 +276,9 @@ func main() {
             processDemo(filepath.Join(input_dir, filename))
         }
     }
+    
+    var input string
+	fmt.Scanln(&input)
 }
 
 func initGameObject() *game {
