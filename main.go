@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+    "io/ioutil"
+    "path/filepath"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
@@ -269,15 +271,18 @@ type playerStats struct {
 }
 
 func main() {
+    input_dir := "in"
+    files, _ := ioutil.ReadDir(input_dir)
 
-	//for concurrency
-	//for i := 0; i < 10; i++ {
-	//	go processDemo("faceit1.dem")
-	//}
-
-	processDemo("oc3.dem")
-
-	var input string
+    for _, file := range files {
+        filename := file.Name()
+        if strings.HasSuffix(filename, ".dem") {
+            fmt.Println("processing", file.Name())
+            processDemo(filepath.Join(input_dir, filename))
+        }
+    }
+    
+    var input string
 	fmt.Scanln(&input)
 }
 
