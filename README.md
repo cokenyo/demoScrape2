@@ -2,7 +2,7 @@
 
 The stats collector for CSC demo files. 
 
-![CSC](https://csconfederation.fandom.com/wiki/Counter_Strike_Confederation_Wiki?file=CSC_Logo.png)
+![CSC](https://static.wikia.nocookie.net/csconfederation/images/b/b6/CSC_Logo.png/revision/latest/scale-to-width-down/368?cb=20211015013433)
 
 Join the CSC discord -> https://discord.gg/cscc
 
