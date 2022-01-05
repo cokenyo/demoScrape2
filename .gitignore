@@ -29,5 +29,6 @@
 *.csv
 *.jpg
 out/
+in/
 
 # End of https://www.toptal.com/developers/gitignore/api/go
