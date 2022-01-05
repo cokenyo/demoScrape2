@@ -91,6 +91,9 @@ func beginOutput(game *game) {
 			"tRF",
 			"ctAWP",
 			"ctK",
+			"lurks",
+			"WLP",
+			"MIP",
 		},
 	}
 
@@ -165,6 +168,9 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.tRF)),
 				strconv.Itoa(int(player.ctAWP)),
 				strconv.Itoa(int(player.ctKills)),
+				strconv.Itoa(int(player.lurkRounds)),
+				fmt.Sprintf("%.2f", player.wlp),
+				fmt.Sprintf("%.1f", player.mip),
 			}
 			records = append(records, [][]string{playerOutput}...)
 		}
@@ -240,6 +246,9 @@ func beginOutput(game *game) {
 				strconv.Itoa(int(player.tRF)),
 				strconv.Itoa(int(player.ctAWP)),
 				strconv.Itoa(int(player.ctKills)),
+				strconv.Itoa(int(player.lurkRounds)),
+				fmt.Sprintf("%.2f", player.wlp),
+				fmt.Sprintf("%.1f", player.mip),
 			}
 			records = append(records, [][]string{playerOutput}...)
 		}
@@ -249,6 +258,9 @@ func beginOutput(game *game) {
 	result := "" + game.teams[game.teamOrder[0]].name + " " + strconv.Itoa(game.teams[game.teamOrder[0]].score) + " - " + strconv.Itoa(game.teams[game.teamOrder[1]].score) + " " + game.teams[game.teamOrder[1]].name
 	resultLine := []string{"1", game.mapName, result}
 	records = append(records, [][]string{resultLine}...)
+
+	spacerLine := []string{" "}
+	records = append(records, [][]string{spacerLine}...)
 
 	for i, _ := range records {
 		w.Write(records[i])

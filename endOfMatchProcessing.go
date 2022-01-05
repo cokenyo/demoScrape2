@@ -87,6 +87,7 @@ func endOfMatchProcessing(game *game) {
 				game.totalPlayerStats[steam].suppDamage += player.suppDamage
 				game.totalPlayerStats[steam].suppRounds += player.suppRounds
 				game.totalPlayerStats[steam].rwk += player.rwk
+				game.totalPlayerStats[steam].mip += player.mip
 
 				if player.side == 2 {
 					game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initTerroristCount
@@ -103,6 +104,10 @@ func endOfMatchProcessing(game *game) {
 					game.totalPlayerStats[steam].tWinPointsNormalizer += game.rounds[i].initTerroristCount
 					game.totalPlayerStats[steam].tRounds += 1
 					game.totalPlayerStats[steam].tRF += player.RF
+					game.totalPlayerStats[steam].lurkRounds += player.lurkRounds
+					if player.lurkRounds != 0 {
+						game.totalPlayerStats[steam].wlp += player.winPoints
+					}
 
 					game.rounds[i].teamStats[player.teamClanName].tWinPoints += player.winPoints
 					game.rounds[i].teamStats[player.teamClanName].tImpactPoints += player.impactPoints
@@ -236,7 +241,7 @@ func calculateDerivedFields(game *game) {
 	ctAdrAvg /= float64(ctRoundNormalizer)
 
 	for _, player := range game.totalPlayerStats {
-		openingFactor := (float64(player.ok-player.ol) / 13.0) + 1
+		openingFactor := (float64(player.ok-player.ol) / 13.0) + 1 //move from 13 to (rounds / 5)
 		playerIPR := player.impactPoints / float64(player.rounds)
 		playerWPR := player.winPoints / float64(player.rounds)
 

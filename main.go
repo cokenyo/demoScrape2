@@ -3,12 +3,12 @@ package main
 import (
 	//"bufio"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-    "io/ioutil"
-    "path/filepath"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
@@ -82,6 +82,7 @@ type flag struct {
 	hasGameStarted            bool
 	isGameLive                bool
 	isGameOver                bool
+	inRound                   bool
 	prePlant                  bool
 	postPlant                 bool
 	postWinCon                bool
@@ -90,14 +91,16 @@ type flag struct {
 	roundIntegrityEndOfficial int
 
 	//for the round (gets reset on a new round) maybe should be in a new struct
-	tAlive        int
-	ctAlive       int
-	tMoney        bool
-	tClutchVal    int
-	ctClutchVal   int
-	tClutchSteam  uint64
-	ctClutchSteam uint64
-	openingKill   bool
+	tAlive            int
+	ctAlive           int
+	tMoney            bool
+	tClutchVal        int
+	ctClutchVal       int
+	tClutchSteam      uint64
+	ctClutchSteam     uint64
+	openingKill       bool
+	lastTickProcessed int
+	ticksProcessed    int
 }
 
 type team struct {
@@ -165,50 +168,56 @@ type playerStats struct {
 	rounds       int
 	//playerPoints float32
 	//teamPoints float32
-	damage         int
-	kills          uint8
-	assists        uint8
-	deaths         uint8
-	deathTick      int
-	deathPlacement float64
-	ticksAlive     int
-	trades         int
-	traded         int
-	ok             int
-	ol             int
-	cl_1           int
-	cl_2           int
-	cl_3           int
-	cl_4           int
-	cl_5           int
-	_2k            int
-	_3k            int
-	_4k            int
-	_5k            int
-	nadeDmg        int
-	infernoDmg     int
-	utilDmg        int
-	ef             int
-	fAss           int
-	enemyFlashTime float64
-	hs             int
-	kastRounds     float64
-	saves          int
-	entries        int
-	killPoints     float64
-	impactPoints   float64
-	winPoints      float64
-	awpKills       int
-	RF             int
-	RA             int
-	nadesThrown    int
-	firesThrown    int
-	flashThrown    int
-	smokeThrown    int
-	damageTaken    int
-	suppRounds     int
-	suppDamage     int
-	rwk            int
+	damage              int
+	kills               uint8
+	assists             uint8
+	deaths              uint8
+	deathTick           int
+	deathPlacement      float64
+	ticksAlive          int
+	trades              int
+	traded              int
+	ok                  int
+	ol                  int
+	cl_1                int
+	cl_2                int
+	cl_3                int
+	cl_4                int
+	cl_5                int
+	_2k                 int
+	_3k                 int
+	_4k                 int
+	_5k                 int
+	nadeDmg             int
+	infernoDmg          int
+	utilDmg             int
+	ef                  int
+	fAss                int
+	enemyFlashTime      float64
+	hs                  int
+	kastRounds          float64
+	saves               int
+	entries             int
+	killPoints          float64
+	impactPoints        float64
+	winPoints           float64
+	awpKills            int
+	RF                  int
+	RA                  int
+	nadesThrown         int
+	firesThrown         int
+	flashThrown         int
+	smokeThrown         int
+	damageTaken         int
+	suppRounds          int
+	suppDamage          int
+	lurkerBlips         int
+	distanceToTeammates int
+	lurkRounds          int
+	wlp                 float64
+	mip                 float64
+
+	rwk int
 
 	//derived
 	utilThrown   int
@@ -271,18 +280,18 @@ type playerStats struct {
 }
 
 func main() {
-    input_dir := "in"
-    files, _ := ioutil.ReadDir(input_dir)
+	input_dir := "in"
+	files, _ := ioutil.ReadDir(input_dir)
 
-    for _, file := range files {
-        filename := file.Name()
-        if strings.HasSuffix(filename, ".dem") {
-            fmt.Println("processing", file.Name())
-            processDemo(filepath.Join(input_dir, filename))
-        }
-    }
-    
-    var input string
+	for _, file := range files {
+		filename := file.Name()
+		if strings.HasSuffix(filename, ".dem") {
+			fmt.Println("processing", file.Name())
+			go processDemo(filepath.Join(input_dir, filename))
+		}
+	}
+
+	var input string
 	fmt.Scanln(&input)
 }
 
@@ -294,6 +303,7 @@ func initGameObject() *game {
 	g.flags.hasGameStarted = false
 	g.flags.isGameLive = false
 	g.flags.isGameOver = false
+	g.flags.inRound = false
 	g.flags.prePlant = true
 	g.flags.postPlant = false
 	g.flags.postWinCon = false
@@ -387,6 +397,7 @@ func processDemo(demoName string) {
 
 	//reset various flags
 	resetRoundFlags := func() {
+		game.flags.inRound = true
 		game.flags.prePlant = true
 		game.flags.postPlant = false
 		game.flags.postWinCon = false
@@ -396,6 +407,8 @@ func processDemo(demoName string) {
 		game.flags.ctClutchSteam = 0
 		game.flags.tMoney = false
 		game.flags.openingKill = true
+		game.flags.lastTickProcessed = 0
+		game.flags.ticksProcessed = 0
 	}
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
@@ -427,14 +440,6 @@ func processDemo(demoName string) {
 		// Reset round
 		game.potentialRound = newRound
 
-		// if len(game.rounds) < game.flags.roundIntegrityStart {
-		// 	//game.potentialRound = currRoundObj
-		// } else {
-		// 	//game.rounds[roundIntegrityStart - 1] = currRoundObj
-		// 	fmt.Println(game.rounds[game.flags.roundIntegrityStart - 1].integrityCheck)
-		// 	//game.rounds = append(game.rounds, currRoundObj)
-		// }
-
 		//track the number of people alive for clutch checking and record keeping
 		game.flags.tAlive = len(terrorists.Members())
 		game.flags.ctAlive = len(counterTerrorists.Members())
@@ -461,6 +466,7 @@ func processDemo(demoName string) {
 	}
 
 	processRoundFinal := func(lastRound bool) {
+		game.flags.inRound = false
 		game.potentialRound.endingTick = p.GameState().IngameTick()
 		game.flags.roundIntegrityEndOfficial = p.GameState().TotalRoundsPlayed()
 		if lastRound {
@@ -523,6 +529,8 @@ func processDemo(demoName string) {
 			}
 
 			//add multikills & saves & misc
+			highestImpactPoints := 0.0
+			mipPlayers := 0
 			for _, player := range (game.potentialRound).playerStats {
 				if player.deaths == 0 {
 					player.kastRounds = 1
@@ -546,17 +554,51 @@ func processDemo(demoName string) {
 					player._5k = 1
 				}
 
+				if player.impactPoints > highestImpactPoints {
+					highestImpactPoints = player.impactPoints
+				}
+
 				if player.teamENUM == game.potentialRound.winnerENUM {
 					player.winPoints = player.impactPoints
+
 					player.RF = 1
-					if player.name == "iNSANEmayne" {
-						debugMsg := fmt.Sprintf("---------%.2f win points for brod on round %d.------------\n", player.impactPoints, game.potentialRound.roundNum)
-						debugFile.WriteString(debugMsg)
-						debugFile.Sync()
-					}
 				} else {
 					player.RA = 1
 				}
+			}
+
+			for _, player := range (game.potentialRound).playerStats {
+				if player.impactPoints == highestImpactPoints {
+					mipPlayers += 1
+				}
+			}
+			for _, player := range (game.potentialRound).playerStats {
+				if player.impactPoints == highestImpactPoints {
+					player.mip = 1.0 / float64(mipPlayers)
+				}
+			}
+
+			//check the lurk
+			var susLurker uint64
+			susLurkBlips := 0
+			invalidLurk := false
+			for _, player := range game.potentialRound.playerStats {
+				if player.side == 2 {
+					if player.lurkerBlips > susLurkBlips {
+						susLurkBlips = player.lurkerBlips
+						susLurker = player.steamID
+					}
+				}
+			}
+			for _, player := range game.potentialRound.playerStats {
+				if player.side == 2 {
+					if player.lurkerBlips == susLurkBlips && player.steamID != susLurker {
+						invalidLurk = true
+					}
+				}
+			}
+			if !invalidLurk && susLurkBlips > 3 {
+				game.potentialRound.playerStats[susLurker].lurkRounds = 1
 			}
 
 			//add our valid round
@@ -568,6 +610,48 @@ func processDemo(demoName string) {
 	}
 
 	//-------------ALL OUR EVENTS---------------------
+
+	p.RegisterEventHandler(func(e events.FrameDone) {
+		if game.flags.inRound && game.flags.lastTickProcessed+(4*game.tickRate) < p.GameState().IngameTick() {
+			game.flags.lastTickProcessed = p.GameState().IngameTick()
+			game.flags.ticksProcessed += 1
+
+			//this will be triggered every 4 seconds of in round time after the first 10 seconds
+
+			//check for lurker
+			if game.flags.tAlive > 2 && !game.flags.postWinCon && p.GameState().IngameTick() > (18*game.tickRate)+game.potentialRound.startingTick {
+				membersT := p.GameState().TeamTerrorists().Members()
+				for _, terrorist := range membersT {
+					if terrorist.IsAlive() {
+						for _, teammate := range membersT {
+							if terrorist.SteamID64 != teammate.SteamID64 && teammate.IsAlive() {
+								dist := int(terrorist.Position().Distance(teammate.Position()))
+								if dist < 500 {
+									//invalidate the lurk blip b/c we have a close teammate
+									game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates = -999999
+								}
+								game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates += dist
+							}
+						}
+					}
+				}
+				var lurkerSteam uint64
+				lurkerDist := 999999
+				for _, terrorist := range membersT {
+					if terrorist.IsAlive() {
+						dist := game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates
+						if dist < lurkerDist && dist > 0 {
+							lurkerDist = dist
+							lurkerSteam = terrorist.SteamID64
+						}
+					}
+				}
+				if lurkerSteam != 0 {
+					game.potentialRound.playerStats[lurkerSteam].lurkerBlips += 1
+				}
+			}
+		}
+	})
 
 	p.RegisterEventHandler(func(e events.RoundStart) {
 		fmt.Printf("Round Start\n")
@@ -908,12 +992,6 @@ func processDemo(demoName string) {
 				killValue *= ecoMod
 
 				pS[e.Killer.SteamID64].killPoints += killValue
-				if e.Killer.Name == "iNSANEmayne" {
-					debugMsg := fmt.Sprintf("---------%.2f kill points for brod on round %d.------------\n", killValue, game.potentialRound.roundNum)
-					debugFile.WriteString(debugMsg)
-					debugFile.Sync()
-				}
-
 			}
 
 		}
@@ -979,8 +1057,8 @@ func processDemo(demoName string) {
 		}
 	})
 
-	p.RegisterEventHandler(func(e events.PlayerJump) {
-		//fmt.Printf("Player Jumped\n")
+	p.RegisterEventHandler(func(e events.RoundImpactScoreData) {
+		fmt.Println("-------ROUNDIMPACTSCOREDATA", e.RawMessage)
 	})
 
 	p.RegisterEventHandler(func(e events.BombPlanted) {
