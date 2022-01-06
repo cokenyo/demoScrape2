@@ -454,6 +454,8 @@ func processDemo(demoName string) {
 		game.flags.roundIntegrityEnd = p.GameState().TotalRoundsPlayed() + 1
 		fmt.Println("We are processing round win con stuff", game.flags.roundIntegrityEnd)
 
+		game.totalRounds = game.flags.roundIntegrityEnd
+
 		game.flags.prePlant = false
 		game.flags.postPlant = false
 		game.flags.postWinCon = true
