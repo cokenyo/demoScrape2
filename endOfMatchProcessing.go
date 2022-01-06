@@ -252,7 +252,11 @@ func calculateDerivedFields(game *game) {
 			player.impactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / impactRoundAvg))
 		}
 		playerDR := float64(player.deaths) / float64(player.rounds)
-		player.rating = (0.3 * player.impactRating) + (0.35 * (player.kR / killRoundAvg)) + (0.07 * (deathRoundAvg / playerDR)) + (0.08 * (player.kast / kastRoundAvg)) + (0.2 * (player.adr / adrAvg))
+		playerRatingDeathComponent := (0.07 * (deathRoundAvg / playerDR))
+		if player.deaths == 0 || playerRatingDeathComponent > 0.21 {
+			playerRatingDeathComponent = 0.21
+		}
+		player.rating = (0.3 * player.impactRating) + (0.35 * (player.kR / killRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.kast / kastRoundAvg)) + (0.2 * (player.adr / adrAvg))
 
 		//ctRating
 		openingFactor = (float64(player.ctOK-player.ctOL) / 13.0) + 1
@@ -267,7 +271,11 @@ func calculateDerivedFields(game *game) {
 			ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg))
 		}
 		playerDR = float64(player.ctDeaths) / float64(player.ctRounds)
-		player.ctRating = (0.3 * ctImpactRating) + (0.35 * ((float64(player.ctKills) / float64(player.ctRounds)) / ctKillRoundAvg)) + (0.07 * (ctDeathRoundAvg / playerDR)) + (0.08 * (player.ctKAST / ctKastRoundAvg)) + (0.2 * (player.ctADR / ctAdrAvg))
+		playerRatingDeathComponent = (0.07 * (ctDeathRoundAvg / playerDR))
+		if player.ctDeaths == 0 || playerRatingDeathComponent > 0.21 {
+			playerRatingDeathComponent = 0.21
+		}
+		player.ctRating = (0.3 * ctImpactRating) + (0.35 * ((float64(player.ctKills) / float64(player.ctRounds)) / ctKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.ctKAST / ctKastRoundAvg)) + (0.2 * (player.ctADR / ctAdrAvg))
 
 		//tRating
 		openingFactor = (float64(player.tOK-player.tOL) / 13.0) + 1
@@ -282,7 +290,11 @@ func calculateDerivedFields(game *game) {
 			tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg))
 		}
 		playerDR = float64(player.tDeaths) / float64(player.tRounds)
-		player.tRating = (0.3 * tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / tKillRoundAvg)) + (0.07 * (tDeathRoundAvg / playerDR)) + (0.08 * (player.tKAST / tKastRoundAvg)) + (0.2 * (player.tADR / tAdrAvg))
+		playerRatingDeathComponent = (0.07 * (tDeathRoundAvg / playerDR))
+		if player.tDeaths == 0 || playerRatingDeathComponent > 0.21 {
+			playerRatingDeathComponent = 0.21
+		}
+		player.tRating = (0.3 * tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / tKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.tKAST / tKastRoundAvg)) + (0.2 * (player.tADR / tAdrAvg))
 
 		fmt.Println("openingFactor", (0.1 * float64(openingFactor)))
 		fmt.Println("playerIPR", (0.6 * (playerIPR / impactRoundAvg)))

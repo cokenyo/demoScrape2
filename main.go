@@ -16,6 +16,7 @@ import (
 )
 
 //TODO
+//add redundancy for if roundEnd event doesnt fire
 //"Catch up on the score" - dont remember what this is lol
 
 //FUNCTIONAL CHANGES
@@ -691,69 +692,74 @@ func processDemo(demoName string) {
 	})
 
 	p.RegisterEventHandler(func(e events.RoundEnd) {
-		fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
+		if game.flags.isGameLive {
 
-		fmt.Println("e.WinnerState.ID()", e.WinnerState.ID(), "and", "e.Winner", e.Winner, "and", "e.WinnerState.Team()", e.WinnerState.Team())
+			fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
 
-		validWinner := true
-		if e.Winner < 2 {
-			validWinner = false
-			//and set the integrity flag to false
+			fmt.Println("e.WinnerState.ID()", e.WinnerState.ID(), "and", "e.Winner", e.Winner, "and", "e.WinnerState.Team()", e.WinnerState.Team())
 
-		} else if e.Winner == 2 {
-			game.flags.tMoney = true
-		} else {
-			//we need to check if the game is over
+			validWinner := true
+			if e.Winner < 2 {
+				validWinner = false
+				//and set the integrity flag to false
 
-		}
+			} else if e.Winner == 2 {
+				game.flags.tMoney = true
+			} else {
+				//we need to check if the game is over
 
-		//we want to actually process the round
-		if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
-			game.potentialRound.winnerENUM = int(e.Winner)
-			processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName()))
+			}
 
-			//check last round
-			roundWinnerScore := game.teams[validateTeamName(game, e.WinnerState.ClanName())].score
-			roundLoserScore := game.teams[validateTeamName(game, e.LoserState.ClanName())].score
-			fmt.Println("winner Rounds", roundWinnerScore)
-			fmt.Println("loser Rounds", roundLoserScore)
+			//we want to actually process the round
+			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
+				game.potentialRound.winnerENUM = int(e.Winner)
+				processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName()))
 
-			if game.roundsToWin == 16 {
-				//check for normal win
-				if roundWinnerScore == 16 && roundLoserScore < 15 {
-					//normal win
-					game.winnerClanName = game.potentialRound.winnerClanName
-					processRoundFinal(true)
-				} else if roundWinnerScore > 15 { //check for OT win
-					overtime := ((roundWinnerScore+roundLoserScore)-30-1)/6 + 1
-					//OT win
-					if (roundWinnerScore-15-1)/3 == overtime {
+				//check last round
+				roundWinnerScore := game.teams[validateTeamName(game, e.WinnerState.ClanName())].score
+				roundLoserScore := game.teams[validateTeamName(game, e.LoserState.ClanName())].score
+				fmt.Println("winner Rounds", roundWinnerScore)
+				fmt.Println("loser Rounds", roundLoserScore)
+
+				if game.roundsToWin == 16 {
+					//check for normal win
+					if roundWinnerScore == 16 && roundLoserScore < 15 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore > 15 { //check for OT win
+						overtime := ((roundWinnerScore+roundLoserScore)-30-1)/6 + 1
+						//OT win
+						if (roundWinnerScore-15-1)/3 == overtime {
+							game.winnerClanName = game.potentialRound.winnerClanName
+							processRoundFinal(true)
+						}
+					}
+				} else if game.roundsToWin == 9 {
+					//check for normal win
+					if roundWinnerScore == 9 && roundLoserScore < 8 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore == 8 && roundLoserScore == 8 { //check for tie
+						//tie
 						game.winnerClanName = game.potentialRound.winnerClanName
 						processRoundFinal(true)
 					}
 				}
-			} else if game.roundsToWin == 9 {
-				//check for normal win
-				if roundWinnerScore == 9 && roundLoserScore < 8 {
-					//normal win
-					game.winnerClanName = game.potentialRound.winnerClanName
-					processRoundFinal(true)
-				} else if roundWinnerScore == 8 && roundLoserScore == 8 { //check for tie
-					//tie
-					game.winnerClanName = game.potentialRound.winnerClanName
-					processRoundFinal(true)
-				}
 			}
+
+			//check last round
+			//or check overtime win
+
 		}
-
-		//check last round
-		//or check overtime win
-
 	})
 
 	//round end official doesnt fire on the last round
 	p.RegisterEventHandler(func(e events.RoundEndOfficial) {
 		fmt.Printf("Round End Official\n")
+
+		fmt.Println("isGameLive", game.flags.isGameLive, "roundIntegrityEnd", game.flags.roundIntegrityEnd, "pTotalRoundsPlayed", p.GameState().TotalRoundsPlayed())
 
 		if game.flags.isGameLive && game.flags.roundIntegrityEnd == p.GameState().TotalRoundsPlayed() {
 			processRoundFinal(false)
