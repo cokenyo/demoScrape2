@@ -16,14 +16,13 @@ import (
 )
 
 //TODO
-//add redundancy for if roundEnd event doesnt fire
 //"Catch up on the score" - dont remember what this is lol
 
 //FUNCTIONAL CHANGES
 //add verification for if a round event has triggered so far in the round (avoid double roundEnds)
 //check for game start without pistol (if we have bad demo)
 //Add backend support
-//Add lurker/anchor stuff
+//Add anchor stuff
 //Add team economy round stats (ecos, forces, etc)
 
 //CLEAN CODE
@@ -102,6 +101,9 @@ type flag struct {
 	openingKill       bool
 	lastTickProcessed int
 	ticksProcessed    int
+	didRoundEndFire   bool
+	roundStartedAt    int
+	haveInitRound     bool
 }
 
 type team struct {
@@ -410,6 +412,9 @@ func processDemo(demoName string) {
 		game.flags.openingKill = true
 		game.flags.lastTickProcessed = 0
 		game.flags.ticksProcessed = 0
+		game.flags.didRoundEndFire = false
+		game.flags.roundStartedAt = 0
+		game.flags.haveInitRound = false
 	}
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
@@ -615,6 +620,38 @@ func processDemo(demoName string) {
 	//-------------ALL OUR EVENTS---------------------
 
 	p.RegisterEventHandler(func(e events.FrameDone) {
+		if game.flags.roundStartedAt > 0 && game.flags.roundStartedAt+(1*game.tickRate) > p.GameState().IngameTick() && !game.flags.haveInitRound {
+			pistol := false
+
+			//we are going to check to see if the first pistol is actually starting
+			membersT := p.GameState().TeamTerrorists().Members()
+			membersCT := p.GameState().TeamCounterTerrorists().Members()
+			if len(membersT) != 0 && len(membersCT) != 0 {
+				if membersT[0].Money()+membersT[0].MoneySpentThisRound() == 800 && membersCT[0].Money()+membersCT[0].MoneySpentThisRound() == 800 {
+					//start the game
+					if !game.flags.hasGameStarted {
+						initGameStart()
+					}
+
+					//track the pistol
+					pistol = true
+				}
+			}
+			//fmt.Println("Has the Game Started?", game.flags.hasGameStarted)
+
+			if game.flags.isGameLive {
+				//init round stats
+				initRound()
+				game.flags.haveInitRound = true
+				if pistol {
+					for _, team := range game.potentialRound.teamStats {
+						team.pistols = 1
+					}
+				}
+
+			}
+		}
+
 		if game.flags.inRound && game.flags.lastTickProcessed+(4*game.tickRate) < p.GameState().IngameTick() {
 			game.flags.lastTickProcessed = p.GameState().IngameTick()
 			game.flags.ticksProcessed += 1
@@ -658,6 +695,9 @@ func processDemo(demoName string) {
 
 	p.RegisterEventHandler(func(e events.RoundStart) {
 		fmt.Printf("Round Start\n")
+
+		game.flags.roundStartedAt = p.GameState().IngameTick()
+
 	})
 
 	p.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
@@ -695,6 +735,8 @@ func processDemo(demoName string) {
 
 	p.RegisterEventHandler(func(e events.RoundEnd) {
 		if game.flags.isGameLive {
+
+			game.flags.didRoundEndFire = true
 
 			fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
 
@@ -758,8 +800,91 @@ func processDemo(demoName string) {
 	})
 
 	//round end official doesnt fire on the last round
+	p.RegisterEventHandler(func(e events.ScoreUpdated) {
+		fmt.Printf("Score Updated\n")
+
+		if game.flags.isGameLive && !game.flags.didRoundEndFire && e.NewScore > e.OldScore && game.winnerClanName == "" {
+			//we are replicating RoundEndEvent functionality because it did not fire
+
+			//this TeamState will "always" be the winner, why update the losing team?
+			winnerEnum := e.TeamState.Team()
+			winnerClanName := e.TeamState.ClanName()
+			loserClanName := ""
+			for teamName, _ := range game.teams {
+				if teamName != validateTeamName(game, winnerClanName) {
+					loserClanName = teamName
+				}
+			}
+
+			fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", winnerClanName, "won", "this determined from e.WinnerState.ClanName()")
+
+			validWinner := true
+			if winnerEnum < 2 {
+				validWinner = false
+				//and set the integrity flag to false
+
+			} else if winnerEnum == 2 {
+				game.flags.tMoney = true
+			} else {
+				//we need to check if the game is over
+
+			}
+
+			fmt.Println("ris", game.flags.roundIntegrityStart, "p.GS.TotalRounds", p.GameState().TotalRoundsPlayed())
+
+			//we want to actually process the round
+			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
+				game.potentialRound.winnerENUM = int(winnerEnum)
+				processRoundOnWinCon(validateTeamName(game, winnerClanName))
+
+				//check last round
+				roundWinnerScore := game.teams[validateTeamName(game, winnerClanName)].score
+				roundLoserScore := game.teams[validateTeamName(game, loserClanName)].score
+				fmt.Println("winner Rounds", roundWinnerScore)
+				fmt.Println("loser Rounds", roundLoserScore)
+
+				if game.roundsToWin == 16 {
+					//check for normal win
+					if roundWinnerScore == 16 && roundLoserScore < 15 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore > 15 { //check for OT win
+						overtime := ((roundWinnerScore+roundLoserScore)-30-1)/6 + 1
+						//OT win
+						if (roundWinnerScore-15-1)/3 == overtime {
+							game.winnerClanName = game.potentialRound.winnerClanName
+							processRoundFinal(true)
+						}
+					}
+				} else if game.roundsToWin == 9 {
+					//check for normal win
+					if roundWinnerScore == 9 && roundLoserScore < 8 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore == 8 && roundLoserScore == 8 { //check for tie
+						//tie
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					}
+				}
+			}
+
+			//check last round
+			//or check overtime win
+
+		}
+	})
+
+	//round end official doesnt fire on the last round
 	p.RegisterEventHandler(func(e events.RoundEndOfficial) {
+
 		fmt.Printf("Round End Official\n")
+
+		if !game.flags.didRoundEndFire {
+			game.flags.roundIntegrityEnd -= 1
+		}
 
 		fmt.Println("isGameLive", game.flags.isGameLive, "roundIntegrityEnd", game.flags.roundIntegrityEnd, "pTotalRoundsPlayed", p.GameState().TotalRoundsPlayed())
 
