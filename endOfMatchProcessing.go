@@ -89,6 +89,10 @@ func endOfMatchProcessing(game *game) {
 				game.totalPlayerStats[steam].rwk += player.rwk
 				game.totalPlayerStats[steam].mip += player.mip
 
+				if player.isBot {
+					game.totalPlayerStats[steam].isBot = true
+				}
+
 				if player.side == 2 {
 					game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initTerroristCount
 					game.totalPlayerStats[steam].tImpactPoints += player.impactPoints

@@ -103,7 +103,7 @@ func beginOutput(game *game) {
 
 	for _, steam := range game.playerOrder {
 		player := game.totalPlayerStats[steam]
-		if player.teamClanName == game.teamOrder[0] {
+		if player.teamClanName == game.teamOrder[0] && !player.isBot {
 			playerOutput := []string{
 				m_ID,
 				game.mapName,
@@ -181,7 +181,7 @@ func beginOutput(game *game) {
 
 	for _, steam := range game.playerOrder {
 		player := game.totalPlayerStats[steam]
-		if player.teamClanName == game.teamOrder[1] {
+		if player.teamClanName == game.teamOrder[1] && !player.isBot {
 			playerOutput := []string{
 				m_ID,
 				game.mapName,

@@ -18,6 +18,9 @@ import (
 //TODO
 //"Catch up on the score" - dont remember what this is lol
 
+//BUG fix
+//add verification for missed event triggers if someone DCs/Cs after the redundant event that is stale
+
 //FUNCTIONAL CHANGES
 //add verification for if a round event has triggered so far in the round (avoid double roundEnds)
 //check for game start without pistol (if we have bad demo)
@@ -164,6 +167,7 @@ type round struct {
 type playerStats struct {
 	name    string
 	steamID uint64
+	isBot   bool
 	//teamID  int
 	teamENUM     int
 	teamClanName string
@@ -400,7 +404,6 @@ func processDemo(demoName string) {
 
 	//reset various flags
 	resetRoundFlags := func() {
-		game.flags.inRound = true
 		game.flags.prePlant = true
 		game.flags.postPlant = false
 		game.flags.postWinCon = false
@@ -419,7 +422,7 @@ func processDemo(demoName string) {
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
 		for _, teamMember := range team.Members() {
-			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
+			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, isBot: teamMember.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
 			currRoundObj.playerStats[player.steamID] = player
 		}
 	}
@@ -722,6 +725,7 @@ func processDemo(demoName string) {
 
 		if game.flags.isGameLive {
 			//init round stats
+			game.flags.inRound = true
 			initRound()
 			if pistol {
 				for _, team := range game.potentialRound.teamStats {
@@ -1260,6 +1264,13 @@ func processDemo(demoName string) {
 					game.flags.ctAlive += 1
 				}
 			}
+		}
+
+	})
+
+	p.RegisterEventHandler(func(e events.Footstep) {
+		if game.flags.isGameLive {
+			game.flags.inRound = true
 		}
 
 	})
