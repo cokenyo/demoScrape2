@@ -12,6 +12,7 @@ Tested on windows.
 
 ### Setup 
 
+1. Clone this repo.
 1. Install [golang](https://go.dev/doc/install).
 1. Make a folder named `in` in this directory.
 1. Put `.dem` files (not `.zip`) in that folder.
