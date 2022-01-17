@@ -93,6 +93,10 @@ func endOfMatchProcessing(game *game) {
 					game.totalPlayerStats[steam].isBot = true
 				}
 
+				if player.RF == 1 {
+					game.rounds[i].winTeamDmg += player.damage
+				}
+
 				if player.side == 2 {
 					game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initTerroristCount
 					game.totalPlayerStats[steam].tImpactPoints += player.impactPoints
@@ -143,6 +147,21 @@ func endOfMatchProcessing(game *game) {
 				game.totalPlayerStats[steam].teamsWinPoints += game.rounds[i].teamStats[player.teamClanName].winPoints
 				game.totalPlayerStats[steam].tTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].tWinPoints
 				game.totalPlayerStats[steam].ctTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].ctWinPoints
+
+				//give players rws
+				if player.RF != 0 {
+					if game.rounds[i].endDueToBombEvent {
+						player.rws = 70 * (float64(player.damage) / float64(game.rounds[i].winTeamDmg))
+						if player.side == 2 && game.rounds[i].planter == player.steamID {
+							player.rws += 30
+						} else if player.side == 3 && game.rounds[i].defuser == player.steamID {
+							player.rws += 30
+						}
+					} else { //round ended due to damage/time
+						player.rws = 100 * (float64(player.damage) / float64(game.rounds[i].winTeamDmg))
+					}
+					game.totalPlayerStats[steam].rws += player.rws
+				}
 			}
 		}
 	}
@@ -202,6 +221,7 @@ func calculateDerivedFields(game *game) {
 		player.ctKAST = player.ctKASTRounds / float64(player.ctRounds)
 		player.tADP = player.tADP / float64(player.tDeaths)
 		player.ctADP = player.ctADP / float64(player.ctDeaths)
+		player.rws = player.rws / float64(player.rounds)
 
 		roundNormalizer += player.rounds
 		impactRoundAvg += player.impactPoints

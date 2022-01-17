@@ -22,7 +22,7 @@ func beginOutput(game *game) {
 
 	outputFile, outputFileErr := os.Create(csvName)
 	if outputFileErr != nil {
-		fmt.Println("OH NOE")
+		fmt.Println("OH NOE you fool, you have that file open. or maybe something else. THE MOON IS BRIGHT!")
 	}
 	w := csv.NewWriter(outputFile)
 

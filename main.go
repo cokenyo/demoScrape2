@@ -20,6 +20,10 @@ import (
 
 //BUG fix
 //add verification for missed event triggers if someone DCs/Cs after the redundant event that is stale
+//csgo bots all have same steamID, need to use something else just in case for bots
+//MM bug?
+
+//add support for esea games? need to change validation and how we determine what round it is (gamestats rounds doesnt work)
 
 //FUNCTIONAL CHANGES
 //add verification for if a round event has triggered so far in the round (avoid double roundEnds)
@@ -27,6 +31,7 @@ import (
 //Add backend support
 //Add anchor stuff
 //Add team economy round stats (ecos, forces, etc)
+//Add various nil checking
 
 //CLEAN CODE
 //create a outputPlayer function to clean up output.go
@@ -160,6 +165,8 @@ type round struct {
 	integrityCheck     bool
 	planter            uint64
 	defuser            uint64
+	endDueToBombEvent  bool
+	winTeamDmg         int
 	serverNormalizer   int
 	serverImpactPoints float64
 }
@@ -223,8 +230,9 @@ type playerStats struct {
 	lurkRounds          int
 	wlp                 float64
 	mip                 float64
+	rws                 float64 //round win shares
 
-	rwk int
+	rwk int //rounds with kills
 
 	//derived
 	utilThrown   int
@@ -300,6 +308,8 @@ func main() {
 
 	var input string
 	fmt.Scanln(&input)
+
+	//authenticate()
 }
 
 func initGameObject() *game {
@@ -673,7 +683,11 @@ func processDemo(demoName string) {
 									//invalidate the lurk blip b/c we have a close teammate
 									game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates = -999999
 								}
-								game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates += dist
+								if game.potentialRound.playerStats[terrorist.SteamID64] != nil {
+									game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates += dist
+								} else {
+									fmt.Println("THIS IS WHERE WE BROKE_______________________________---------------------------------------------------")
+								}
 							}
 						}
 					}
@@ -682,6 +696,9 @@ func processDemo(demoName string) {
 				lurkerDist := 999999
 				for _, terrorist := range membersT {
 					if terrorist.IsAlive() {
+						if game.potentialRound.playerStats[terrorist.SteamID64] == nil {
+							fmt.Println(terrorist.Name)
+						}
 						dist := game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates
 						if dist < lurkerDist && dist > 0 {
 							lurkerDist = dist
@@ -697,7 +714,7 @@ func processDemo(demoName string) {
 	})
 
 	p.RegisterEventHandler(func(e events.RoundStart) {
-		fmt.Printf("Round Start\n")
+		fmt.Println("Round Start", p.GameState().TotalRoundsPlayed())
 
 		game.flags.roundStartedAt = p.GameState().IngameTick()
 
@@ -1210,20 +1227,23 @@ func processDemo(demoName string) {
 
 	p.RegisterEventHandler(func(e events.BombDefused) {
 		fmt.Println("Bomb Defused by", e.BombEvent.Player.Name)
-		if game.flags.isGameLive {
+		if game.flags.isGameLive && !game.flags.postWinCon {
 			game.flags.prePlant = false
 			game.flags.postPlant = false
 			game.flags.postWinCon = true
+			game.potentialRound.endDueToBombEvent = true
+			game.potentialRound.defuser = e.Player.SteamID64
 			game.potentialRound.playerStats[e.BombEvent.Player.SteamID64].impactPoints += 0.5
 		}
 	})
 
 	p.RegisterEventHandler(func(e events.BombExplode) {
 		fmt.Printf("Bomb Exploded\n")
-		if game.flags.isGameLive {
+		if game.flags.isGameLive && !game.flags.postWinCon {
 			game.flags.prePlant = false
 			game.flags.postPlant = false
 			game.flags.postWinCon = true
+			game.potentialRound.endDueToBombEvent = true
 			game.potentialRound.playerStats[game.potentialRound.planter].impactPoints += 0.5
 		}
 	})
@@ -1244,8 +1264,24 @@ func processDemo(demoName string) {
 		}
 	})
 
+	p.RegisterEventHandler(func(e events.PlayerTeamChange) {
+		fmt.Println("Player Changed Team:", e.Player, e.OldTeam, e.NewTeam)
+
+		if game.flags.isGameLive && game.flags.inRound {
+			if e.NewTeam > 1 {
+				//we are joining an actual team
+				if game.potentialRound.playerStats[e.Player.SteamID64] == nil && e.Player.IsBot && e.Player.IsAlive() {
+					//get team
+					team := e.NewTeamState
+					player := &playerStats{name: e.Player.Name, steamID: e.Player.SteamID64, isBot: e.Player.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
+					game.potentialRound.playerStats[player.steamID] = player
+				}
+			}
+		}
+	})
+
 	p.RegisterEventHandler(func(e events.PlayerDisconnected) {
-		//fmt.Println("Player DC", e.Player)
+		fmt.Println("Player DC", e.Player)
 
 		//update alive players
 		if game.flags.isGameLive {
