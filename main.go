@@ -45,6 +45,7 @@ const DEBUG = false
 //globals
 const printChatLog = true
 const printDebugLog = true
+const FORCE_NEW_STATS_UPLOAD = false
 
 const tradeCutoff = 4 // in seconds
 var multikillBonus = [...]float64{0, 0, 0.3, 0.7, 1.2, 2}
@@ -69,6 +70,7 @@ var killValues = map[string]float64{
 
 type game struct {
 	//winnerID         int
+	coreID           string
 	winnerClanName   string
 	rounds           []*round
 	potentialRound   *round
@@ -231,6 +233,7 @@ type playerStats struct {
 	wlp                 float64
 	mip                 float64
 	rws                 float64 //round win shares
+	eac                 int     //effective assist contributions
 
 	rwk int //rounds with kills
 
@@ -294,6 +297,35 @@ type playerStats struct {
 	damageList         map[uint64]int
 }
 
+type Accolades struct {
+	awp               int
+	deagle            int
+	knife             int
+	dinks             int
+	blindKills        int
+	bombPlants        int
+	jumps             int
+	teamDMG           int
+	selfDMG           int
+	ping              int
+	footsteps         int //unnecessary processing?
+	bombTaps          int
+	killsThroughSmoke int
+	penetrations      int
+	noScopes          int
+	midairKills       int
+	crouchedKills     int
+	bombzoneKills     int
+	killsWhileMoving  int
+	mostMoneySpent    int
+	mostShotsOnLegs   int
+	shotsFired        int
+	ak                int
+	m4                int
+	pistol            int
+	scout             int
+}
+
 func main() {
 	input_dir := "in"
 	files, _ := ioutil.ReadDir(input_dir)
@@ -308,8 +340,6 @@ func main() {
 
 	var input string
 	fmt.Scanln(&input)
-
-	//authenticate()
 }
 
 func initGameObject() *game {
@@ -346,6 +376,12 @@ func processDemo(demoName string) {
 		panic(err)
 	}
 	defer f.Close()
+
+	tempCoreID := strings.Split(demoName, "mid")
+	if len(tempCoreID) > 1 {
+		//we have a CSC match
+		game.coreID = strings.Split(strings.Split(demoName, "mid")[1], ".")[0]
+	}
 
 	p := dem.NewParser(f)
 	defer p.Close()
@@ -1012,6 +1048,7 @@ func processDemo(demoName string) {
 				for deadGuySteam, deadTick := range (*game.potentialRound).playerStats[e.Victim.SteamID64].tradeList {
 					if tick-deadTick < tradeCutoff*game.tickRate {
 						pS[deadGuySteam].traded = 1
+						pS[deadGuySteam].eac += 1
 						pS[deadGuySteam].kastRounds = 1
 					}
 				}
@@ -1019,8 +1056,9 @@ func processDemo(demoName string) {
 
 			//assist logic
 			if assisterExists && victimExists && e.Assister.TeamState.ID() != e.Victim.TeamState.ID() {
-				//this logic needs to be replaced
+				//this logic needs to be replaced -yeti does not remember why he wrote this
 				pS[e.Assister.SteamID64].assists += 1
+				pS[e.Assister.SteamID64].eac += 1
 				pS[e.Assister.SteamID64].kastRounds = 1
 				pS[e.Assister.SteamID64].suppRounds = 1
 				assisted = true
@@ -1030,6 +1068,7 @@ func processDemo(demoName string) {
 				} else if float64(p.GameState().IngameTick()) < pS[e.Victim.SteamID64].mostRecentFlashVal {
 					//this will trigger if there is both a flash assist and a damage assist
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].fAss += 1
+					pS[pS[e.Victim.SteamID64].mostRecentFlasher].eac += 1
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].suppRounds = 1
 					flashAssisted = true
 				}
@@ -1330,6 +1369,15 @@ func processDemo(demoName string) {
 	//we want to iterate through rounds backwards to make sure their are no repeats
 
 	endOfMatchProcessing(game)
+
+	if game.coreID != "" {
+		client := authenticate()
+		if verifyOriginalMatch(client, game.coreID) || FORCE_NEW_STATS_UPLOAD {
+			addMatch(client, game)
+		}
+	} else {
+		fmt.Println("This is not a CSC demo D:")
+	}
 
 	fmt.Println("Demo is complete!")
 	//cleanup()

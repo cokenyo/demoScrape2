@@ -88,6 +88,7 @@ func endOfMatchProcessing(game *game) {
 				game.totalPlayerStats[steam].suppRounds += player.suppRounds
 				game.totalPlayerStats[steam].rwk += player.rwk
 				game.totalPlayerStats[steam].mip += player.mip
+				game.totalPlayerStats[steam].eac += player.eac
 
 				if player.isBot {
 					game.totalPlayerStats[steam].isBot = true
