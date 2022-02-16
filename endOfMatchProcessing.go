@@ -9,12 +9,15 @@ func endOfMatchProcessing(game *game) {
 
 	game.totalPlayerStats = make(map[uint64]*playerStats)
 	game.totalTeamStats = make(map[string]*teamStats)
+	game.totalWPAlog = make([]*wpalog, 0)
 
 	validRoundsMap := make(map[int8]bool)
 	for i := len(game.rounds) - 1; i >= 0; i-- {
 		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
-		if game.rounds[i].integrityCheck && !validRoundExists {
+		if game.rounds[i].integrityCheck && !game.rounds[i].knifeRound && !validRoundExists {
 			//this i-th round is good to add
+
+			game.totalWPAlog = append(game.totalWPAlog, game.rounds[i].WPAlog...)
 
 			validRoundsMap[game.rounds[i].roundNum] = true
 			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount

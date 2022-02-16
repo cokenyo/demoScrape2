@@ -19,6 +19,7 @@ import (
 //"Catch up on the score" - dont remember what this is lol
 
 //BUG fix
+//MAKE ROUNDENDOFFICIAL Redundant (may have done, make sure it passes validation tho)
 //add verification for missed event triggers if someone DCs/Cs after the redundant event that is stale
 //csgo bots all have same steamID, need to use something else just in case for bots
 //MM bug?
@@ -37,6 +38,7 @@ import (
 //create a outputPlayer function to clean up output.go
 //convert rating calculations to a function
 //actually use killValues lmao
+//place structs in diff file
 
 const DEBUG = false
 
@@ -46,6 +48,7 @@ const DEBUG = false
 const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
+const ENABLE_WPA_DATA_OUTPUT = false
 
 const tradeCutoff = 4 // in seconds
 var multikillBonus = [...]float64{0, 0, 0.3, 0.7, 1.2, 2}
@@ -85,6 +88,7 @@ type game struct {
 	playerOrder      []uint64
 	teamOrder        []string
 	totalRounds      int
+	totalWPAlog      []*wpalog
 }
 
 type flag struct {
@@ -118,8 +122,9 @@ type flag struct {
 
 type team struct {
 	//id    int //meaningless?
-	name  string
-	score int
+	name          string
+	score         int
+	scoreAdjusted int
 }
 
 type teamStats struct {
@@ -171,6 +176,34 @@ type round struct {
 	winTeamDmg         int
 	serverNormalizer   int
 	serverImpactPoints float64
+	knifeRound         bool
+
+	WPAlog        []*wpalog
+	bombStartTick int
+}
+
+type wpalog struct {
+	round               int
+	tick                int
+	clock               int
+	planted             int
+	ctAlive             int
+	tAlive              int
+	ctEquipVal          int
+	tEquipVal           int
+	ctFlashes           int
+	ctSmokes            int
+	ctMolys             int
+	ctFrags             int
+	tFlashes            int
+	tSmokes             int
+	tMolys              int
+	tFrags              int
+	closestCTDisttoBomb int
+	kits                int
+	ctArmor             int
+	tArmor              int
+	winner              int
 }
 
 type playerStats struct {
@@ -298,17 +331,18 @@ type playerStats struct {
 }
 
 type Accolades struct {
-	awp               int
-	deagle            int
-	knife             int
-	dinks             int
-	blindKills        int
-	bombPlants        int
-	jumps             int
-	teamDMG           int
-	selfDMG           int
-	ping              int
-	footsteps         int //unnecessary processing?
+	awp        int
+	deagle     int
+	knife      int
+	dinks      int
+	blindKills int
+	bombPlants int
+	jumps      int
+	teamDMG    int
+	selfDMG    int
+	ping       int
+	pingPoints int
+	//footsteps         int //unnecessary processing?
 	bombTaps          int
 	killsThroughSmoke int
 	penetrations      int
@@ -428,9 +462,9 @@ func processDemo(demoName string) {
 		game.teams = make(map[string]*team)
 
 		teamTemp := p.GameState().TeamTerrorists()
-		game.teams[teamTemp.ClanName()] = &team{name: validateTeamName(game, teamTemp.ClanName())}
+		game.teams[validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())] = &team{name: validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())}
 		teamTemp = p.GameState().TeamCounterTerrorists()
-		game.teams[teamTemp.ClanName()] = &team{name: validateTeamName(game, teamTemp.ClanName())}
+		game.teams[validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())] = &team{name: validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())}
 
 		//to handle short and long matches
 		if p.GameState().ConVars()["mp_maxrounds"] != "30" {
@@ -468,7 +502,7 @@ func processDemo(demoName string) {
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
 		for _, teamMember := range team.Members() {
-			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, isBot: teamMember.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
+			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, isBot: teamMember.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName(), team.Team()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
 			currRoundObj.playerStats[player.steamID] = player
 		}
 	}
@@ -489,8 +523,11 @@ func processDemo(demoName string) {
 		initTeamPlayer(counterTerrorists, newRound)
 
 		//set teams in teamStats for the round
-		newRound.teamStats[validateTeamName(game, p.GameState().TeamTerrorists().ClanName())] = &teamStats{tR: 1}
-		newRound.teamStats[validateTeamName(game, p.GameState().TeamCounterTerrorists().ClanName())] = &teamStats{ctR: 1}
+		newRound.teamStats[validateTeamName(game, p.GameState().TeamTerrorists().ClanName(), p.GameState().TeamTerrorists().Team())] = &teamStats{tR: 1}
+		newRound.teamStats[validateTeamName(game, p.GameState().TeamCounterTerrorists().ClanName(), p.GameState().TeamCounterTerrorists().Team())] = &teamStats{ctR: 1}
+
+		//create empty WPAlog
+		newRound.WPAlog = make([]*wpalog, 0)
 
 		// Reset round
 		game.potentialRound = newRound
@@ -516,10 +553,14 @@ func processDemo(demoName string) {
 
 		//set winner
 		game.potentialRound.winnerClanName = winnerClanName
-		game.teams[game.potentialRound.winnerClanName].score += 1
-		//fmt.Println("We think this team won", game.teams[game.potentialRound.winnerID].name)
-		//check clutch
-
+		//fmt.Println("We think this team won", winnerClanName)
+		if !game.potentialRound.knifeRound {
+			game.teams[game.potentialRound.winnerClanName].score += 1
+		}
+		//go through and set our WPAlog output to the winner
+		for _, log := range game.potentialRound.WPAlog {
+			log.winner = game.potentialRound.winnerENUM - 2
+		}
 	}
 
 	processRoundFinal := func(lastRound bool) {
@@ -669,6 +710,7 @@ func processDemo(demoName string) {
 	//-------------ALL OUR EVENTS---------------------
 
 	p.RegisterEventHandler(func(e events.FrameDone) {
+		//fmt.Println("DIBES ", game.flags.isGameLive)
 		if game.flags.roundStartedAt > 0 && game.flags.roundStartedAt+(1*game.tickRate) > p.GameState().IngameTick() && !game.flags.haveInitRound {
 			pistol := false
 
@@ -698,6 +740,57 @@ func processDemo(demoName string) {
 					}
 				}
 
+			}
+		}
+
+		//add to WPAlog
+		if game.flags.inRound && !game.flags.postWinCon && ENABLE_WPA_DATA_OUTPUT {
+			//hits every new frame (typically each 1-4 ticks)
+			logSize := len(game.potentialRound.WPAlog)
+			clock := 0
+			planted := 0
+			if game.potentialRound.planter != 0 {
+				planted = 1
+				bombTime, boo := p.GameState().Rules().BombTime()
+				bombClock := 0
+				if boo != nil {
+					bombClock = 40
+				} else {
+					bombClock = int(bombTime.Seconds())
+				}
+				clock = bombClock - ((p.GameState().IngameTick() - game.potentialRound.bombStartTick) / game.tickRate)
+			} else {
+				roundTime, boo := p.GameState().Rules().RoundTime()
+				if boo != nil {
+					fmt.Println("RUROO RAGGY")
+				}
+				clock = int(roundTime.Seconds()) - ((p.GameState().IngameTick() - game.potentialRound.startingTick) / game.tickRate)
+			}
+
+			if logSize == 0 || game.potentialRound.WPAlog[logSize-1].tick+(game.tickRate) < p.GameState().IngameTick() {
+				newWPAentry := &wpalog{
+					round:               int(game.potentialRound.roundNum),
+					clock:               clock,
+					planted:             planted,
+					tick:                p.GameState().IngameTick(),
+					ctAlive:             game.flags.ctAlive,
+					tAlive:              game.flags.tAlive,
+					ctEquipVal:          calculateTeamEquipmentValue(game, p.GameState().TeamCounterTerrorists()),
+					tEquipVal:           calculateTeamEquipmentValue(game, p.GameState().TeamTerrorists()),
+					ctFlashes:           calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 15),
+					ctSmokes:            calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 16),
+					ctMolys:             calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 17),
+					ctFrags:             calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 14),
+					tFlashes:            calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 15),
+					tSmokes:             calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 16),
+					tMolys:              calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 17),
+					tFrags:              calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 14),
+					closestCTDisttoBomb: closestCTDisttoBomb(game, p.GameState().TeamCounterTerrorists(), p.GameState().Bomb()),
+					kits:                numOfKits(game, p.GameState().TeamCounterTerrorists()),
+					ctArmor:             playersWithArmor(game, p.GameState().TeamCounterTerrorists()),
+					tArmor:              playersWithArmor(game, p.GameState().TeamTerrorists()),
+				}
+				game.potentialRound.WPAlog = append(game.potentialRound.WPAlog, newWPAentry)
 			}
 		}
 
@@ -772,6 +865,10 @@ func processDemo(demoName string) {
 
 				//track the pistol
 				pistol = true
+			} else if membersT[0].Money()+membersT[0].MoneySpentThisRound() == 0 && membersCT[0].Money()+membersCT[0].MoneySpentThisRound() == 0 {
+				game.potentialRound.knifeRound = true
+				fmt.Println("------------KNIFEROUND-----------")
+				game.flags.hasGameStarted = false
 			}
 		}
 		fmt.Println("Has the Game Started?", game.flags.hasGameStarted)
@@ -814,11 +911,11 @@ func processDemo(demoName string) {
 			//we want to actually process the round
 			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
 				game.potentialRound.winnerENUM = int(e.Winner)
-				processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName()))
+				processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName(), e.WinnerState.Team()))
 
 				//check last round
-				roundWinnerScore := game.teams[validateTeamName(game, e.WinnerState.ClanName())].score
-				roundLoserScore := game.teams[validateTeamName(game, e.LoserState.ClanName())].score
+				roundWinnerScore := game.teams[validateTeamName(game, e.WinnerState.ClanName(), e.WinnerState.Team())].score
+				roundLoserScore := game.teams[validateTeamName(game, e.LoserState.ClanName(), e.LoserState.Team())].score
 				fmt.Println("winner Rounds", roundWinnerScore)
 				fmt.Println("loser Rounds", roundLoserScore)
 
@@ -867,9 +964,15 @@ func processDemo(demoName string) {
 			winnerEnum := e.TeamState.Team()
 			winnerClanName := e.TeamState.ClanName()
 			loserClanName := ""
+			loserTeam := common.TeamUnassigned
 			for teamName, _ := range game.teams {
-				if teamName != validateTeamName(game, winnerClanName) {
+				if teamName != validateTeamName(game, winnerClanName, e.TeamState.Team()) {
 					loserClanName = teamName
+					if e.TeamState.Team() == 2 {
+						loserTeam = common.TeamCounterTerrorists
+					} else if e.TeamState.Team() == 3 {
+						loserTeam = common.TeamTerrorists
+					}
 				}
 			}
 
@@ -892,11 +995,11 @@ func processDemo(demoName string) {
 			//we want to actually process the round
 			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
 				game.potentialRound.winnerENUM = int(winnerEnum)
-				processRoundOnWinCon(validateTeamName(game, winnerClanName))
+				processRoundOnWinCon(validateTeamName(game, winnerClanName, e.TeamState.Team()))
 
 				//check last round
-				roundWinnerScore := game.teams[validateTeamName(game, winnerClanName)].score
-				roundLoserScore := game.teams[validateTeamName(game, loserClanName)].score
+				roundWinnerScore := game.teams[validateTeamName(game, winnerClanName, e.TeamState.Team())].score
+				roundLoserScore := game.teams[validateTeamName(game, loserClanName, loserTeam)].score
 				fmt.Println("winner Rounds", roundWinnerScore)
 				fmt.Println("loser Rounds", roundLoserScore)
 
@@ -1261,6 +1364,7 @@ func processDemo(demoName string) {
 			game.flags.postPlant = true
 			game.flags.tMoney = true
 			game.potentialRound.planter = e.BombEvent.Player.SteamID64
+			game.potentialRound.bombStartTick = p.GameState().IngameTick()
 		}
 	})
 
@@ -1312,7 +1416,7 @@ func processDemo(demoName string) {
 				if game.potentialRound.playerStats[e.Player.SteamID64] == nil && e.Player.IsBot && e.Player.IsAlive() {
 					//get team
 					team := e.NewTeamState
-					player := &playerStats{name: e.Player.Name, steamID: e.Player.SteamID64, isBot: e.Player.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
+					player := &playerStats{name: e.Player.Name, steamID: e.Player.SteamID64, isBot: e.Player.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName(), team.Team()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
 					game.potentialRound.playerStats[player.steamID] = player
 				}
 			}

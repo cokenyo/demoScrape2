@@ -18,6 +18,10 @@ func beginOutput(game *game) {
 	m_ID := createHash(game)
 	fmt.Println("M_ID", m_ID)
 
+	if ENABLE_WPA_DATA_OUTPUT {
+		outputWPA(game, m_ID)
+	}
+
 	csvName := "out/" + m_ID + ".csv"
 
 	outputFile, outputFileErr := os.Create(csvName)
@@ -98,7 +102,7 @@ func beginOutput(game *game) {
 	}
 
 	//this shit needa die
-	teamA := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[0]].name, "", "1", "", "", "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[0]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[0]].score)}
+	teamA := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[0]].name, "", "1", "", "", strconv.Itoa(game.teams[game.teamOrder[0]].scoreAdjusted), strconv.Itoa(game.teams[game.teamOrder[1]].scoreAdjusted), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[0]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[0]].score)}
 	records = append(records, [][]string{teamA}...)
 
 	for _, steam := range game.playerOrder {
@@ -176,7 +180,7 @@ func beginOutput(game *game) {
 		}
 	}
 
-	teamB := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[1]].name, "", "", "", "1", "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[1]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[1]].score)}
+	teamB := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[1]].name, "", "", "", "1", strconv.Itoa(game.teams[game.teamOrder[1]].scoreAdjusted), strconv.Itoa(game.teams[game.teamOrder[0]].scoreAdjusted), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[1]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[1]].score)}
 	records = append(records, [][]string{teamB}...)
 
 	for _, steam := range game.playerOrder {
@@ -326,6 +330,8 @@ func setDisplayOrders(game *game) {
 		}
 	}
 
+	adjustScoresForTiebreaks(game)
+
 	for _, teamClanName := range game.teamOrder {
 		offset := len(game.playerOrder)
 		for steam, player := range game.totalPlayerStats {
@@ -352,4 +358,103 @@ func setDisplayOrders(game *game) {
 	}
 	fmt.Println(game.teamOrder)
 	fmt.Println(game.playerOrder)
+}
+
+func adjustScoresForTiebreaks(game *game) {
+	//check for OT win
+	winnerScore := game.teams[game.teamOrder[0]].score
+	if winnerScore > 19 {
+		numOfOTs := (winnerScore - 16) / 3
+		if numOfOTs > 1 {
+			subtractOTs := numOfOTs - 1
+			game.teams[game.teamOrder[0]].scoreAdjusted = game.teams[game.teamOrder[0]].score - (subtractOTs * 3)
+			game.teams[game.teamOrder[1]].scoreAdjusted = game.teams[game.teamOrder[1]].score - (subtractOTs * 3)
+		}
+	} else {
+		game.teams[game.teamOrder[0]].scoreAdjusted = game.teams[game.teamOrder[0]].score
+		game.teams[game.teamOrder[1]].scoreAdjusted = game.teams[game.teamOrder[1]].score
+	}
+}
+
+func outputWPA(game *game, m_ID string) {
+
+	csvName := "out/WPA_" + m_ID + ".csv"
+
+	outputFile, outputFileErr := os.Create(csvName)
+	if outputFileErr != nil {
+		fmt.Println("OH NOE you fool, you have that file open. or maybe something else. THE MOON IS BRIGHT!")
+	}
+	w := csv.NewWriter(outputFile)
+
+	records := [][]string{
+		{
+			"map",
+			"rH",
+			"clock",
+			"planted",
+			"ctAlive",
+			"tAlive",
+			"ctEquipVal",
+			"tEquipVal",
+			"ctEquipValPerPlayer",
+			"tEquipValPerPlayer",
+			"ctFlashes",
+			"ctSmokes",
+			"ctMolys",
+			"ctFrags",
+			"tFlashes",
+			"tSmokes",
+			"tMolys",
+			"tFrags",
+			"closestCTDistToBomb",
+			"kits",
+			"ctArmor",
+			"tArmor",
+			"ct_won",
+		},
+	}
+
+	for _, log := range game.totalWPAlog {
+		ctEquipValPerPlayer := 0
+		if log.ctAlive != 0 {
+			ctEquipValPerPlayer = int(log.ctEquipVal / log.ctAlive)
+		}
+		tEquipValPerPlayer := 0
+		if log.tAlive != 0 {
+			tEquipValPerPlayer = int(log.tEquipVal / log.tAlive)
+		}
+
+		wpaOutput := []string{
+			game.mapName,
+			"rh" + strconv.Itoa(log.round) + "_" + m_ID,
+			strconv.Itoa(log.clock),
+			strconv.Itoa(log.planted),
+			strconv.Itoa(log.ctAlive),
+			strconv.Itoa(log.tAlive),
+			strconv.Itoa(log.ctEquipVal),
+			strconv.Itoa(log.tEquipVal),
+			strconv.Itoa(ctEquipValPerPlayer),
+			strconv.Itoa(tEquipValPerPlayer),
+			strconv.Itoa(log.ctFlashes),
+			strconv.Itoa(log.ctSmokes),
+			strconv.Itoa(log.ctMolys),
+			strconv.Itoa(log.ctFrags),
+			strconv.Itoa(log.tFlashes),
+			strconv.Itoa(log.tSmokes),
+			strconv.Itoa(log.tMolys),
+			strconv.Itoa(log.tFrags),
+			strconv.Itoa(log.closestCTDisttoBomb),
+			strconv.Itoa(log.kits),
+			strconv.Itoa(log.ctArmor),
+			strconv.Itoa(log.tArmor),
+			strconv.Itoa(log.winner),
+		}
+		records = append(records, [][]string{wpaOutput}...)
+	}
+
+	for i, _ := range records {
+		w.Write(records[i])
+	}
+	w.Flush()
+
 }
