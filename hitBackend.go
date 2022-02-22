@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"strconv"
 
-	"github.com/hasura/go-graphql-client"
 	"github.com/joho/godotenv"
+	"github.com/machinebox/graphql"
 )
 
-func authenticate() graphql.Client {
+func authenticate() string {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -21,104 +21,137 @@ func authenticate() graphql.Client {
 	graphqlDiscord := os.Getenv("GRAPHQL_DISCORDID")
 	graphqlPass := os.Getenv("GRAPHQL_PASSWORD")
 
-	client := graphql.NewClient(graphqlEndpoint, nil)
+	client := graphql.NewClient(graphqlEndpoint)
 
-	var m struct {
+	req := graphql.NewRequest(`
+		mutation Authenticate($discordId: String!, $password: String!) {
+			tokenAuth(discordId: $discordId, password: $password) {
+				token
+			}
+		}
+	`)
+
+	req.Var("discordId", graphqlDiscord)
+	req.Var("password", graphqlPass)
+
+
+	ctx := context.Background()
+
+	type ResponseStruct struct {
 		TokenAuth struct {
-			Token graphql.String
-		} `graphql:"tokenAuth(discordId: $discordId, password: $apiKey)"`
+			Token string
+		}
 	}
 
-	variables := map[string]interface{}{
-		"discordId": graphql.String(graphqlDiscord),
-		"apiKey":    graphql.String(graphqlPass),
+	var respData ResponseStruct
+	if err := client.Run(ctx, req, &respData); err != nil {
+		fmt.Println(err)
 	}
 
-	err2 := client.Mutate(context.Background(), &m, variables)
-	if err2 != nil {
-		// Handle error.
-		fmt.Println(err2)
-	}
+	fmt.Println(respData)
 
-	addAuthHeader := func(request *http.Request) {
-		request.Header.Add("Authorization", "JWT "+string(m.TokenAuth.Token))
-	}
 
-	return *graphql.NewClient(graphqlEndpoint, nil).WithRequestModifier(addAuthHeader)
+	return respData.TokenAuth.Token
 
 	//return m.TokenAuth.Token
 }
 
-func verifyOriginalMatch(client graphql.Client, coreID string) bool {
-	var q struct {
-		Match struct {
-			Id    graphql.ID
-			Stats struct {
-				Id graphql.ID
+func verifyOriginalMatch(token string, coreID string) bool {
+	fmt.Println("VERIFYING ORIGINAL MATCH")
+
+	client := graphql.NewClient(os.Getenv("GRAPHQL_ENDPOINT"))
+
+	req := graphql.NewRequest(`
+		query GetMatch($coreId: String!) {
+			match(matchId: $coreId) {
+				id
+				stats {
+					id
+				}
 			}
-		} `graphql:"match(matchId: $coreID)"`
+		}
+	`)
+
+	req.Var("coreId", coreID)
+	req.Header.Set("Authorization", "JWT "+token)
+
+	type ResponseStruct struct {
+		Match struct {
+			Id string
+			Stats struct {
+				Id string
+			}
+		}
 	}
 
-	variables := map[string]interface{}{
-		"coreID": graphql.String(coreID),
+	var respData ResponseStruct
+	if err := client.Run(context.Background(), req, &respData); err != nil {
+		fmt.Println(err)
 	}
 
-	err2 := client.Query(context.Background(), &q, variables)
-	if err2 != nil {
-		// Handle error.
-		fmt.Println(err2)
-	}
+	return respData.Match.Id != "" && respData.Match.Stats.Id == ""
 
-	fmt.Println(q.Match)
+	// fmt.Println(q.Match)
 
-	// I think this will explode!
-	return q.Match.Id != nil && q.Match.Stats.Id == nil
+	// // I think this will explode!
+	// return q.Match.Id != nil && q.Match.Stats.Id == nil
 }
 
-func addMatch(client graphql.Client, game *game) {
+func addMatchStats(token string, game *game) {
 	fmt.Println("ADDING MATCH")
 
-	var m struct {
-		MatchStats struct {
-			Id graphql.ID
-		} `graphql:"addMatchStats(matchId: $matchId, matchStatsInput: $matchStatsInput)"`
+	client := graphql.NewClient(os.Getenv("GRAPHQL_ENDPOINT"))
+
+	req := graphql.NewRequest(`
+		mutation AddMatchStats($matchId: String!, $matchStatsInput: MatchStatsInput!) {
+			addMatchStats(matchId: $matchId, matchStatsInput: $matchStatsInput) {
+				id
+			}
+		}
+	`)
+
+	type Dictionary map[string]interface{}
+
+	matchStatsInput := Dictionary{
+		"playerStats": []Dictionary{
+		},
+		"rounds": []Dictionary{
+			{},
+			{},
+		},
+		"teamStats": []Dictionary{
+			{},
+			{},
+		},
 	}
 
-	type TeamStatsInput struct {
-		teamName graphql.String
+	for _, player := range game.totalPlayerStats {
+		playerStat := Dictionary{
+			"playerSteamId": strconv.FormatUint(player.steamID, 10),
+			"side": strconv.Itoa(player.side),
+			"adp": player.tADP,
+			"adr": player.tADR,
+		}
+
+		matchStatsInput["playerStats"] = append(matchStatsInput["playerStats"].([]Dictionary), playerStat)
 	}
 
-	type PlayerStatsInput struct {
-		playerSteamId graphql.String
+	req.Var("matchId", game.coreID)
+	req.Var("matchStatsInput", matchStatsInput)
+
+	req.Header.Set("Authorization", "JWT "+token)
+
+	type ResponseStruct struct {
+		AddMatchStats struct {
+			Id string
+		}
 	}
 
-	type RoundsStatsInput struct {
-		roundNumber graphql.Int
+	var respData ResponseStruct
+	if err := client.Run(context.Background(), req, &respData); err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	type MatchStatsInput struct {
-		teamStats   [1]*TeamStatsInput
-		playerStats []*PlayerStatsInput
-		rounds      []*RoundsStatsInput
-	}
-
-	teamStatsInput := TeamStatsInput{teamName: graphql.String("Team A")}
-
-	matchStatsInput := MatchStatsInput{}
-
-	matchStatsInput.teamStats[0] = &teamStatsInput
-
-	variables := map[string]interface{}{
-		"matchId":         graphql.String(game.coreID),
-		"matchStatsInput": matchStatsInput,
-	}
-
-	fmt.Println(variables)
-
-	err2 := client.Mutate(context.Background(), &m, variables)
-	if err2 != nil {
-		// Handle error.
-		fmt.Println(err2)
-	}
-
+	fmt.Println("We created match stats with ID: " + respData.AddMatchStats.Id)
 }
