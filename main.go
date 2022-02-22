@@ -49,6 +49,7 @@ const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
 const ENABLE_WPA_DATA_OUTPUT = false
+const BACKEND_PUSHING = false
 
 const tradeCutoff = 4 // in seconds
 var multikillBonus = [...]float64{0, 0, 0.3, 0.7, 1.2, 2}
@@ -1055,6 +1056,7 @@ func processDemo(demoName string) {
 
 	// Register handler on kill events
 	p.RegisterEventHandler(func(e events.Kill) {
+		flashAssister := ""
 		if game.flags.isGameLive && isDuringExpectedRound(game, p) {
 			pS := game.potentialRound.playerStats
 			tick := p.GameState().IngameTick()
@@ -1168,12 +1170,14 @@ func processDemo(demoName string) {
 				if e.AssistedFlash {
 					pS[e.Assister.SteamID64].fAss += 1
 					flashAssisted = true
+					flashAssister = e.Assister.Name
 				} else if float64(p.GameState().IngameTick()) < pS[e.Victim.SteamID64].mostRecentFlashVal {
 					//this will trigger if there is both a flash assist and a damage assist
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].fAss += 1
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].eac += 1
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].suppRounds = 1
 					flashAssisted = true
+					flashAssister = pS[pS[e.Victim.SteamID64].mostRecentFlasher].name
 				}
 
 			}
@@ -1299,7 +1303,7 @@ func processDemo(demoName string) {
 		if e.PenetratedObjects > 0 {
 			wallBang = " (WB)"
 		}
-		fmt.Printf("%s <%v%s%s> %s at %d\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick())
+		fmt.Printf("%s <%v%s%s> %s at %d flash assist by %s\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerHurt) {
@@ -1474,7 +1478,7 @@ func processDemo(demoName string) {
 
 	endOfMatchProcessing(game)
 
-	if game.coreID != "" {
+	if BACKEND_PUSHING && game.coreID != "" {
 		client := authenticate()
 		if verifyOriginalMatch(client, game.coreID) || FORCE_NEW_STATS_UPLOAD {
 			addMatch(client, game)

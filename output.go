@@ -291,6 +291,7 @@ func createHash(game *game) string {
 
 	fmt.Println("tick", hashValue)
 	hashValue += fmt.Sprint(totalDamage) + playerInitial
+	hashValue = strings.Replace(hashValue, "|", "_", -1)
 
 	return randomizeHash(hashValue, totalUD)
 }
