@@ -23,7 +23,7 @@ func endOfMatchProcessing(game *game) {
 			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
 
 			for teamName, team := range game.rounds[i].teamStats {
-				if game.totalTeamStats[teamName] == nil {
+				if game.totalTeamStats[teamName] == nil && teamName != "" {
 					game.totalTeamStats[teamName] = &teamStats{}
 				}
 				game.totalTeamStats[teamName].pistols += team.pistols
