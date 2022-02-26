@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"strconv"
 
-	"github.com/hasura/go-graphql-client"
 	"github.com/joho/godotenv"
+	"github.com/machinebox/graphql"
 )
 
-func authenticate() graphql.Client {
+type Dictionary map[string]interface{}
+
+func authenticate() string {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -21,104 +23,219 @@ func authenticate() graphql.Client {
 	graphqlDiscord := os.Getenv("GRAPHQL_DISCORDID")
 	graphqlPass := os.Getenv("GRAPHQL_PASSWORD")
 
-	client := graphql.NewClient(graphqlEndpoint, nil)
+	client := graphql.NewClient(graphqlEndpoint)
 
-	var m struct {
+	req := graphql.NewRequest(`
+		mutation Authenticate($discordId: String!, $password: String!) {
+			tokenAuth(discordId: $discordId, password: $password) {
+				token
+			}
+		}
+	`)
+
+	req.Var("discordId", graphqlDiscord)
+	req.Var("password", graphqlPass)
+
+
+	ctx := context.Background()
+
+	type ResponseStruct struct {
 		TokenAuth struct {
-			Token graphql.String
-		} `graphql:"tokenAuth(discordId: $discordId, password: $apiKey)"`
+			Token string
+		}
 	}
 
-	variables := map[string]interface{}{
-		"discordId": graphql.String(graphqlDiscord),
-		"apiKey":    graphql.String(graphqlPass),
+	var respData ResponseStruct
+	if err := client.Run(ctx, req, &respData); err != nil {
+		fmt.Println(err)
 	}
 
-	err2 := client.Mutate(context.Background(), &m, variables)
-	if err2 != nil {
-		// Handle error.
-		fmt.Println(err2)
-	}
+	fmt.Println(respData)
 
-	addAuthHeader := func(request *http.Request) {
-		request.Header.Add("Authorization", "JWT "+string(m.TokenAuth.Token))
-	}
 
-	return *graphql.NewClient(graphqlEndpoint, nil).WithRequestModifier(addAuthHeader)
+	return respData.TokenAuth.Token
 
 	//return m.TokenAuth.Token
 }
 
-func verifyOriginalMatch(client graphql.Client, coreID string) bool {
-	var q struct {
-		Match struct {
-			Id    graphql.ID
-			Stats struct {
-				Id graphql.ID
+func verifyOriginalMatch(token string, coreID string) bool {
+	fmt.Println("VERIFYING ORIGINAL MATCH")
+
+	client := graphql.NewClient(os.Getenv("GRAPHQL_ENDPOINT"))
+
+	req := graphql.NewRequest(`
+		query GetMatch($coreId: String!) {
+			match(matchId: $coreId) {
+				id
+				stats {
+					id
+				}
 			}
-		} `graphql:"match(matchId: $coreID)"`
+		}
+	`)
+
+	req.Var("coreId", coreID)
+	req.Header.Set("Authorization", "JWT "+token)
+
+	type ResponseStruct struct {
+		Match struct {
+			Id string
+			Stats struct {
+				Id string
+			}
+		}
 	}
 
-	variables := map[string]interface{}{
-		"coreID": graphql.String(coreID),
+	var respData ResponseStruct
+	if err := client.Run(context.Background(), req, &respData); err != nil {
+		fmt.Println(err)
 	}
 
-	err2 := client.Query(context.Background(), &q, variables)
-	if err2 != nil {
-		// Handle error.
-		fmt.Println(err2)
-	}
+	return respData.Match.Id != "" && respData.Match.Stats.Id == ""
 
-	fmt.Println(q.Match)
+	// fmt.Println(q.Match)
 
-	// I think this will explode!
-	return q.Match.Id != nil && q.Match.Stats.Id == nil
+	// // I think this will explode!
+	// return q.Match.Id != nil && q.Match.Stats.Id == nil
 }
 
-func addMatch(client graphql.Client, game *game) {
+func addMatchStats(token string, game *game) {
 	fmt.Println("ADDING MATCH")
 
-	var m struct {
-		MatchStats struct {
-			Id graphql.ID
-		} `graphql:"addMatchStats(matchId: $matchId, matchStatsInput: $matchStatsInput)"`
+	client := graphql.NewClient(os.Getenv("GRAPHQL_ENDPOINT"))
+
+	req := graphql.NewRequest(`
+		mutation AddMatchStats($matchId: String!, $winnerTeamName: String!, $score: String!, $matchStatsInput: MatchStatsInput!) {
+			addMatchStats(matchId: $matchId, winnerTeamName: $winnerTeamName, score: $score, matchStatsInput: $matchStatsInput) {
+				id
+			}
+		}
+	`)
+
+	matchStatsInput := Dictionary{
+		"playerStats": []Dictionary{
+		},
+		"rounds": []Dictionary{
+		},
+		"teamStats": []Dictionary{
+		},
 	}
 
-	type TeamStatsInput struct {
-		teamName graphql.String
+	for _, player := range game.totalPlayerStats {
+		playerStat := Dictionary{
+			"playerSteamId": strconv.FormatUint(player.steamID, 10),
+			"side": "t",
+			"adp": player.tADP,
+			"adr": player.tADR,
+			"assists": player.assists,
+			"atd": player.atd,
+			"awpK": player.awpKills,
+			"damageDealt": player.tDamage,
+			"damageTaken": player.damageTaken,
+			"deaths": player.tDeaths,
+			"ef": player.ef,
+			"eft": player.enemyFlashTime,
+			"fAss": player.fAss,
+			"fDeaths": player.tOL,
+			"fireDamage": player.infernoDmg,
+			"fires": player.firesThrown,
+			"fiveK": player._5k,
+			"fourK": player._4k,
+			"threeK": player._3k,
+			"twoK": player._2k,
+			"fKills": player.tOK,
+			"flashes": player.flashThrown,
+			"hs": player.hs,
+			"impact": player.impactRating,
+			"iwr": player.iiwr,
+			"jumps": 0,
+			"kast": player.kast,
+			"kills": player.kills,
+			"kpa": player.killPointAvg,
+			"lurks": player.lurkRounds,
+			"mip": player.mip,
+			"nadeDamage": player.nadeDmg,
+			"nades": player.nadesThrown,
+			"oneVFive": player.cl_5,
+			"oneVFour": player.cl_4,
+			"oneVThree": player.cl_3,
+			"oneVTwo": player.cl_2,
+			"oneVOne": player.cl_1,
+			"ra": player.RA,
+			"rating": player.rating,
+			"rf": player.RF,
+			"rounds": player.tRounds,
+			"rwk": player.rwk,
+			"saves": player.saves,
+			"smokes": player.smokeThrown,
+			"suppR": player.suppRounds,
+			"suppX": player.suppDamage,
+			"traded": player.traded,
+			"trades": player.trades,
+			"ud": player.utilDmg,
+			"util": player.utilThrown,
+			"wlp": player.wlp,
+		}
+
+		matchStatsInput["playerStats"] = append(matchStatsInput["playerStats"].([]Dictionary), playerStat)
 	}
 
-	type PlayerStatsInput struct {
-		playerSteamId graphql.String
+	for _, round := range game.rounds {
+		roundStat := Dictionary{
+			"ctPlayers": round.initCTerroristCount,
+			"tPlayers": round.initTerroristCount,
+			"defuserSteamId": strconv.FormatUint(round.defuser, 10),
+			"planterSteamId": strconv.FormatUint(round.planter, 10),
+			"roundLength": round.endingTick,
+			"roundNumber": round.roundNum,
+			"roundWinnerTeamName": round.winnerClanName,
+			"sideWinner": strconv.Itoa(round.winnerENUM),
+		}
+
+		matchStatsInput["rounds"] = append(matchStatsInput["rounds"].([]Dictionary), roundStat)
 	}
 
-	type RoundsStatsInput struct {
-		roundNumber graphql.Int
+	for name, team := range game.totalTeamStats {
+		teamStat := Dictionary{
+			"teamName": name,
+			"clutches": team.clutches,
+			"deaths": team.deaths,
+			"ef": team.ef,
+			"fa": team.fass,
+			"fourVFives": team._4v5s,
+			"pistolsWon": team.pistolsW,
+			"rounds": 0,
+			"roundsAgainst": 0,
+			"roundsWon": 0,
+			"saves": 0,
+			"side": "t",
+			"traded": team.traded,
+			"ud": team.ud,
+			"util": team.util,
+			"wonFourVFives": team._4v5w,
+		}
+
+		matchStatsInput["teamStats"] = append(matchStatsInput["teamStats"].([]Dictionary), teamStat)
 	}
 
-	type MatchStatsInput struct {
-		teamStats   [1]*TeamStatsInput
-		playerStats []*PlayerStatsInput
-		rounds      []*RoundsStatsInput
+	req.Var("matchId", game.coreID)
+	req.Var("winnerTeamName", game.winnerClanName)
+	req.Var("score", "16:14")
+	req.Var("matchStatsInput", matchStatsInput)
+
+	req.Header.Set("Authorization", "JWT "+token)
+
+	type ResponseStruct struct {
+		AddMatchStats struct {
+			Id string
+		}
 	}
 
-	teamStatsInput := TeamStatsInput{teamName: graphql.String("Team A")}
-
-	matchStatsInput := MatchStatsInput{}
-
-	matchStatsInput.teamStats[0] = &teamStatsInput
-
-	variables := map[string]interface{}{
-		"matchId":         graphql.String(game.coreID),
-		"matchStatsInput": matchStatsInput,
+	var respData ResponseStruct
+	if err := client.Run(context.Background(), req, &respData); err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	fmt.Println(variables)
-
-	err2 := client.Mutate(context.Background(), &m, variables)
-	if err2 != nil {
-		// Handle error.
-		fmt.Println(err2)
-	}
-
+	fmt.Println("We created match stats with ID: " + respData.AddMatchStats.Id)
 }
