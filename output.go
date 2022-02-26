@@ -102,158 +102,24 @@ func beginOutput(game *game) {
 	}
 
 	//this shit needa die
-	teamA := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[0]].name, "", "1", "", "", strconv.Itoa(game.teams[game.teamOrder[0]].scoreAdjusted), strconv.Itoa(game.teams[game.teamOrder[1]].scoreAdjusted), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[0]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[0]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[0]].score)}
+	teamA := teamOutput(m_ID, game, 0)
 	records = append(records, [][]string{teamA}...)
 
 	for _, steam := range game.playerOrder {
 		player := game.totalPlayerStats[steam]
 		if player.teamClanName == game.teamOrder[0] && !player.isBot {
-			playerOutput := []string{
-				m_ID,
-				game.mapName,
-				game.teams[game.teamOrder[0]].name,
-				"sid" + strconv.FormatUint(player.steamID, 10),
-				player.name,
-				fmt.Sprintf("%.2f", player.rating),
-				strconv.Itoa(int(player.kills)),
-				strconv.Itoa(int(player.assists)),
-				strconv.Itoa(int(player.deaths)),
-				strconv.Itoa(int(player.adr)),
-				fmt.Sprintf("%.2f", player.kast),
-				fmt.Sprintf("%.2f", player.impactRating),
-				fmt.Sprintf("%.2f", player.ctRating),
-				fmt.Sprintf("%.2f", player.tRating),
-				fmt.Sprintf("%.2f", player.deathPlacement),
-				strconv.Itoa(int(player.suppRounds)),
-				strconv.Itoa(int(player.suppDamage)),
-				strconv.Itoa(int(player.utilDmg)),
-				strconv.Itoa(int(player.ef)),
-				strconv.Itoa(int(player.fAss)),
-				strconv.Itoa(int(player.utilThrown)),
-				strconv.Itoa(int(player.hs)),
-				strconv.Itoa(int(player.awpKills)),
-				strconv.Itoa(int(player.ok)),
-				strconv.Itoa(int(player.ol)),
-				strconv.Itoa(int(player.entries)),
-				strconv.Itoa(int(player.saves)),
-				strconv.Itoa(int(player.trades)),
-				strconv.Itoa(int(player.traded)),
-				strconv.Itoa(int(player._2k)),
-				strconv.Itoa(int(player._3k)),
-				strconv.Itoa(int(player._4k)),
-				strconv.Itoa(int(player._5k)),
-				strconv.Itoa(int(player.cl_1)),
-				strconv.Itoa(int(player.cl_2)),
-				strconv.Itoa(int(player.cl_3)),
-				strconv.Itoa(int(player.cl_4)),
-				strconv.Itoa(int(player.cl_5)),
-				strconv.Itoa(int(player.rounds)),
-				strconv.Itoa(int(player.RF)),
-				strconv.Itoa(int(player.RA)),
-				strconv.Itoa(int(player.damage)),
-				strconv.Itoa(int(player.damageTaken)),
-				strconv.Itoa(int(player.atd)),
-				fmt.Sprintf("%.2f", player.ctADP),
-				fmt.Sprintf("%.2f", player.tADP),
-				strconv.Itoa(int(player.smokeThrown)),
-				strconv.Itoa(int(player.flashThrown)),
-				strconv.Itoa(int(player.firesThrown)),
-				strconv.Itoa(int(player.nadesThrown)),
-				strconv.Itoa(int(player.infernoDmg)),
-				strconv.Itoa(int(player.nadeDmg)),
-				fmt.Sprintf("%.0f", player.enemyFlashTime),
-				strconv.Itoa(int(player.rwk)),
-				fmt.Sprintf("%.2f", player.iiwr),
-				fmt.Sprintf("%.2f", player.killPointAvg),
-				strconv.Itoa(int(player.tOL)),
-				strconv.Itoa(int(player.ctOK)),
-				strconv.Itoa(int(player.ctOL)),
-				strconv.Itoa(int(player.tRounds)),
-				strconv.Itoa(int(player.tRF)),
-				strconv.Itoa(int(player.ctAWP)),
-				strconv.Itoa(int(player.ctKills)),
-				strconv.Itoa(int(player.lurkRounds)),
-				fmt.Sprintf("%.2f", player.wlp),
-				fmt.Sprintf("%.1f", player.mip),
-			}
+			playerOutput := playerOutputFunc(m_ID, player, game, game.teams[game.teamOrder[0]].name)
 			records = append(records, [][]string{playerOutput}...)
 		}
 	}
 
-	teamB := []string{m_ID, game.mapName, "", "", game.teams[game.teamOrder[1]].name, "", "", "", "1", strconv.Itoa(game.teams[game.teamOrder[1]].scoreAdjusted), strconv.Itoa(game.teams[game.teamOrder[0]].scoreAdjusted), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctRW), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tRW), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ctR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].tR), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ud), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].ef), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].fass), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].util), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].pistolsW), "", "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].saves), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].traded), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].deaths), "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4w), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name].clutches), "", "", strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._4v5s), strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[1]].name]._5v4s), strconv.Itoa(game.totalRounds), strconv.Itoa(game.teams[game.teamOrder[1]].score), strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[1]].score)}
+	teamB := teamOutput(m_ID, game, 1)
 	records = append(records, [][]string{teamB}...)
 
 	for _, steam := range game.playerOrder {
 		player := game.totalPlayerStats[steam]
 		if player.teamClanName == game.teamOrder[1] && !player.isBot {
-			playerOutput := []string{
-				m_ID,
-				game.mapName,
-				game.teams[game.teamOrder[1]].name,
-				"sid" + strconv.FormatUint(player.steamID, 10),
-				player.name,
-				fmt.Sprintf("%.2f", player.rating),
-				strconv.Itoa(int(player.kills)),
-				strconv.Itoa(int(player.assists)),
-				strconv.Itoa(int(player.deaths)),
-				strconv.Itoa(int(player.adr)),
-				fmt.Sprintf("%.2f", player.kast),
-				fmt.Sprintf("%.2f", player.impactRating),
-				fmt.Sprintf("%.2f", player.ctRating),
-				fmt.Sprintf("%.2f", player.tRating),
-				fmt.Sprintf("%.2f", player.deathPlacement),
-				strconv.Itoa(int(player.suppRounds)),
-				strconv.Itoa(int(player.suppDamage)),
-				strconv.Itoa(int(player.utilDmg)),
-				strconv.Itoa(int(player.ef)),
-				strconv.Itoa(int(player.fAss)),
-				strconv.Itoa(int(player.utilThrown)),
-				strconv.Itoa(int(player.hs)),
-				strconv.Itoa(int(player.awpKills)),
-				strconv.Itoa(int(player.ok)),
-				strconv.Itoa(int(player.ol)),
-				strconv.Itoa(int(player.entries)),
-				strconv.Itoa(int(player.saves)),
-				strconv.Itoa(int(player.trades)),
-				strconv.Itoa(int(player.traded)),
-				strconv.Itoa(int(player._2k)),
-				strconv.Itoa(int(player._3k)),
-				strconv.Itoa(int(player._4k)),
-				strconv.Itoa(int(player._5k)),
-				strconv.Itoa(int(player.cl_1)),
-				strconv.Itoa(int(player.cl_2)),
-				strconv.Itoa(int(player.cl_3)),
-				strconv.Itoa(int(player.cl_4)),
-				strconv.Itoa(int(player.cl_5)),
-				strconv.Itoa(int(player.rounds)),
-				strconv.Itoa(int(player.RF)),
-				strconv.Itoa(int(player.RA)),
-				strconv.Itoa(int(player.damage)),
-				strconv.Itoa(int(player.damageTaken)),
-				strconv.Itoa(int(player.atd)),
-				fmt.Sprintf("%.2f", player.ctADP),
-				fmt.Sprintf("%.2f", player.tADP),
-				strconv.Itoa(int(player.smokeThrown)),
-				strconv.Itoa(int(player.flashThrown)),
-				strconv.Itoa(int(player.firesThrown)),
-				strconv.Itoa(int(player.nadesThrown)),
-				strconv.Itoa(int(player.infernoDmg)),
-				strconv.Itoa(int(player.nadeDmg)),
-				fmt.Sprintf("%.0f", player.enemyFlashTime),
-				strconv.Itoa(int(player.rwk)),
-				fmt.Sprintf("%.2f", player.iiwr),
-				fmt.Sprintf("%.2f", player.killPointAvg),
-				strconv.Itoa(int(player.tOL)),
-				strconv.Itoa(int(player.ctOK)),
-				strconv.Itoa(int(player.ctOL)),
-				strconv.Itoa(int(player.tRounds)),
-				strconv.Itoa(int(player.tRF)),
-				strconv.Itoa(int(player.ctAWP)),
-				strconv.Itoa(int(player.ctKills)),
-				strconv.Itoa(int(player.lurkRounds)),
-				fmt.Sprintf("%.2f", player.wlp),
-				fmt.Sprintf("%.1f", player.mip),
-			}
+			playerOutput := playerOutputFunc(m_ID, player, game, game.teams[game.teamOrder[1]].name)
 			records = append(records, [][]string{playerOutput}...)
 		}
 	}
@@ -270,6 +136,138 @@ func beginOutput(game *game) {
 		w.Write(records[i])
 	}
 	w.Flush()
+}
+
+func playerOutputFunc(m_ID string, player *playerStats, game *game, teamName string) []string {
+	return []string{
+		m_ID,
+		game.mapName,
+		teamName,
+		"sid" + strconv.FormatUint(player.steamID, 10),
+		player.name,
+		fmt.Sprintf("%.2f", player.rating),
+		strconv.Itoa(int(player.kills)),
+		strconv.Itoa(int(player.assists)),
+		strconv.Itoa(int(player.deaths)),
+		strconv.Itoa(int(player.adr)),
+		fmt.Sprintf("%.2f", player.kast),
+		fmt.Sprintf("%.2f", player.impactRating),
+		fmt.Sprintf("%.2f", player.ctRating),
+		fmt.Sprintf("%.2f", player.tRating),
+		fmt.Sprintf("%.2f", player.deathPlacement),
+		strconv.Itoa(int(player.suppRounds)),
+		strconv.Itoa(int(player.suppDamage)),
+		strconv.Itoa(int(player.utilDmg)),
+		strconv.Itoa(int(player.ef)),
+		strconv.Itoa(int(player.fAss)),
+		strconv.Itoa(int(player.utilThrown)),
+		strconv.Itoa(int(player.hs)),
+		strconv.Itoa(int(player.awpKills)),
+		strconv.Itoa(int(player.ok)),
+		strconv.Itoa(int(player.ol)),
+		strconv.Itoa(int(player.entries)),
+		strconv.Itoa(int(player.saves)),
+		strconv.Itoa(int(player.trades)),
+		strconv.Itoa(int(player.traded)),
+		strconv.Itoa(int(player._2k)),
+		strconv.Itoa(int(player._3k)),
+		strconv.Itoa(int(player._4k)),
+		strconv.Itoa(int(player._5k)),
+		strconv.Itoa(int(player.cl_1)),
+		strconv.Itoa(int(player.cl_2)),
+		strconv.Itoa(int(player.cl_3)),
+		strconv.Itoa(int(player.cl_4)),
+		strconv.Itoa(int(player.cl_5)),
+		strconv.Itoa(int(player.rounds)),
+		strconv.Itoa(int(player.RF)),
+		strconv.Itoa(int(player.RA)),
+		strconv.Itoa(int(player.damage)),
+		strconv.Itoa(int(player.damageTaken)),
+		strconv.Itoa(int(player.atd)),
+		fmt.Sprintf("%.2f", player.ctADP),
+		fmt.Sprintf("%.2f", player.tADP),
+		strconv.Itoa(int(player.smokeThrown)),
+		strconv.Itoa(int(player.flashThrown)),
+		strconv.Itoa(int(player.firesThrown)),
+		strconv.Itoa(int(player.nadesThrown)),
+		strconv.Itoa(int(player.infernoDmg)),
+		strconv.Itoa(int(player.nadeDmg)),
+		fmt.Sprintf("%.0f", player.enemyFlashTime),
+		strconv.Itoa(int(player.rwk)),
+		fmt.Sprintf("%.2f", player.iiwr),
+		fmt.Sprintf("%.2f", player.killPointAvg),
+		strconv.Itoa(int(player.tOL)),
+		strconv.Itoa(int(player.ctOK)),
+		strconv.Itoa(int(player.ctOL)),
+		strconv.Itoa(int(player.tRounds)),
+		strconv.Itoa(int(player.tRF)),
+		strconv.Itoa(int(player.ctAWP)),
+		strconv.Itoa(int(player.ctKills)),
+		strconv.Itoa(int(player.lurkRounds)),
+		fmt.Sprintf("%.2f", player.wlp),
+		fmt.Sprintf("%.1f", player.mip),
+	}
+}
+
+func teamOutput(m_ID string, game *game, team int) []string {
+	oppositeTeam := 0
+	if team == 0 {
+		oppositeTeam = 1
+	}
+
+	winnerString := ""
+	loserString := ""
+
+	if team == 0 {
+		winnerString = "1"
+	}
+
+	if team > 0 {
+		loserString = "1"
+	}
+
+	return []string{
+		m_ID,
+		game.mapName,
+		"",
+		"",
+		game.teams[game.teamOrder[team]].name,
+		"",
+		winnerString, // winner
+		"",
+		loserString, // loser
+		strconv.Itoa(game.teams[game.teamOrder[team]].scoreAdjusted),
+		strconv.Itoa(game.teams[game.teamOrder[oppositeTeam]].scoreAdjusted),
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].ctRW),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].tRW),
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].ctR),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].tR),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].ud),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].ef),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].fass),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].util),
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].pistolsW),
+		"",
+		"",
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].saves),
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].traded),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].deaths),
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name]._4v5w),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name]._5v4w),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name].clutches),
+		"",
+		"",
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name]._4v5s),
+		strconv.Itoa(game.totalTeamStats[game.teams[game.teamOrder[team]].name]._5v4s),
+		strconv.Itoa(game.totalRounds),
+		strconv.Itoa(game.teams[game.teamOrder[team]].score),
+		strconv.Itoa(game.totalRounds - game.teams[game.teamOrder[team]].score)}
 }
 
 func createHash(game *game) string {
