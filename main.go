@@ -1171,6 +1171,7 @@ func processDemo(demoName string) {
 					pS[e.Assister.SteamID64].fAss += 1
 					flashAssisted = true
 					flashAssister = e.Assister.Name
+					fmt.Println("VALVE FLASH ASSIST")
 				} else if float64(p.GameState().IngameTick()) < pS[e.Victim.SteamID64].mostRecentFlashVal {
 					//this will trigger if there is both a flash assist and a damage assist
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].fAss += 1
@@ -1333,7 +1334,7 @@ func processDemo(demoName string) {
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerFlashed) {
-		//fmt.Printf("Player Flashed\n")
+		//fmt.Println("Player Flashed")
 		tick := float64(p.GameState().IngameTick())
 		blindTicks := e.FlashDuration().Seconds() * 128.0
 		if game.flags.isGameLive && e.Player != nil && e.Attacker != nil {
@@ -1348,13 +1349,14 @@ func processDemo(demoName string) {
 				}
 
 			}
-			// if flasher.Name != "" {
-			// 	debugMsg := fmt.Sprintf("%s flashed %s for %.2f at %d. He was %f blind.\n", flasher, victim, blindTicks/128, int(tick), victim.FlashDuration)
-			// 	debugFile.WriteString(debugMsg)
-			// 	debugFile.Sync()
-			// }
+			if flasher.Name != "" {
+				debugMsg := fmt.Sprintf("%s flashed %s for %.2f at %d. He was %f blind.\n", flasher, victim, blindTicks/128, int(tick), victim.FlashDuration)
+				debugFile.WriteString(debugMsg)
+				debugFile.Sync()
+			}
 
 		}
+		fmt.Println("Player Flashed", blindTicks, e.Attacker)
 	})
 
 	p.RegisterEventHandler(func(e events.RoundImpactScoreData) {
