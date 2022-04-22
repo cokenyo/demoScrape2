@@ -49,7 +49,7 @@ const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
 const ENABLE_WPA_DATA_OUTPUT = false
-const BACKEND_PUSHING = true
+const BACKEND_PUSHING = false
 
 const tradeCutoff = 4 // in seconds
 var multikillBonus = [...]float64{0, 0, 0.3, 0.7, 1.2, 2}
@@ -1356,7 +1356,7 @@ func processDemo(demoName string) {
 			}
 
 		}
-		fmt.Println("Player Flashed", blindTicks, e.Attacker)
+		//fmt.Println("Player Flashed", blindTicks, e.Attacker)
 	})
 
 	p.RegisterEventHandler(func(e events.RoundImpactScoreData) {
@@ -1485,7 +1485,7 @@ func processDemo(demoName string) {
 		if verifyOriginalMatch(token, game.coreID) || FORCE_NEW_STATS_UPLOAD {
 			addMatchStats(token, game)
 		}
-	} else {
+	} else if game.coreID != "" {
 		fmt.Println("This is not a CSC demo D:")
 	}
 
