@@ -338,5 +338,34 @@ func calculateDerivedFields(game *game) {
 	fmt.Println("kastRoundAvg", kastRoundAvg)
 	fmt.Println("adrAvg", adrAvg)
 
-	beginOutput(game)
+	calculateSidedStats(game)
+}
+
+func calculateSidedStats(game *game) {
+
+	game.ctPlayerStats = make(map[uint64]*playerStats)
+	game.tPlayerStats = make(map[uint64]*playerStats)
+
+	validRoundsMap := make(map[int8]bool)
+	for i := len(game.rounds) - 1; i >= 0; i-- {
+		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
+		if game.rounds[i].integrityCheck && !game.rounds[i].knifeRound && !validRoundExists {
+			//this i-th round is good to add
+
+			validRoundsMap[game.rounds[i].roundNum] = true
+			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
+
+			//add to round master stats
+			fmt.Println(game.rounds[i].roundNum)
+			for steam, player := range (*game.rounds[i]).playerStats {
+				sidedStats = game.ctPlayerStats
+				if player.side == 2 {
+					sidedStats = game.tPlayerStats
+				}
+
+			}
+		}
+	}
+
+	return
 }

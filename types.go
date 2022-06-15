@@ -1,6 +1,5 @@
 package main
 
-
 type game struct {
 	//winnerID         int
 	coreID           string
@@ -14,6 +13,8 @@ type game struct {
 	tickLength       int
 	roundsToWin      int //30 or 16
 	totalPlayerStats map[uint64]*playerStats
+	ctPlayerStats    map[uint64]*playerStats
+	tPlayerStats     map[uint64]*playerStats
 	totalTeamStats   map[string]*teamStats
 	playerOrder      []uint64
 	teamOrder        []string
