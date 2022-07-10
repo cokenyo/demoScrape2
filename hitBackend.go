@@ -36,7 +36,6 @@ func authenticate() string {
 	req.Var("discordId", graphqlDiscord)
 	req.Var("password", graphqlPass)
 
-
 	ctx := context.Background()
 
 	type ResponseStruct struct {
@@ -50,15 +49,14 @@ func authenticate() string {
 		fmt.Println(err)
 	}
 
-	fmt.Println(respData)
-
+	//fmt.Println(respData)
 
 	return respData.TokenAuth.Token
 
 	//return m.TokenAuth.Token
 }
 
-func verifyOriginalMatch(token string, coreID string) bool {
+func verifyOriginalMatch(token string, coreID string, mapNumber int) bool {
 	fmt.Println("VERIFYING ORIGINAL MATCH")
 
 	client := graphql.NewClient(os.Getenv("GRAPHQL_ENDPOINT"))
@@ -69,6 +67,7 @@ func verifyOriginalMatch(token string, coreID string) bool {
 				id
 				stats {
 					id
+					mapNumber
 				}
 			}
 		}
@@ -79,9 +78,10 @@ func verifyOriginalMatch(token string, coreID string) bool {
 
 	type ResponseStruct struct {
 		Match struct {
-			Id string
-			Stats struct {
-				Id string
+			Id    string
+			Stats []struct {
+				Id        string
+				MapNumber int
 			}
 		}
 	}
@@ -89,14 +89,23 @@ func verifyOriginalMatch(token string, coreID string) bool {
 	var respData ResponseStruct
 	if err := client.Run(context.Background(), req, &respData); err != nil {
 		fmt.Println(err)
+		fmt.Println("Error in finding match stats")
+		return false
 	}
 
-	return respData.Match.Id != "" && respData.Match.Stats.Id == ""
+	matchStatsExist := false
+	// Check match ID + map number to NOT exist in order to push new stats
+	for _, matchStat := range respData.Match.Stats {
+		if respData.Match.Id == coreID && matchStat.MapNumber == mapNumber {
+			matchStatsExist = true
+		}
+	}
 
-	// fmt.Println(q.Match)
+	if matchStatsExist {
+		fmt.Println("MATCH ALREADY HAS STATS!!")
+	}
 
-	// // I think this will explode!
-	// return q.Match.Id != nil && q.Match.Stats.Id == nil
+	return !matchStatsExist
 }
 
 func addMatchStats(token string, game *game) {
@@ -105,91 +114,47 @@ func addMatchStats(token string, game *game) {
 	client := graphql.NewClient(os.Getenv("GRAPHQL_ENDPOINT"))
 
 	req := graphql.NewRequest(`
-		mutation AddMatchStats($matchId: String!, $winnerTeamName: String!, $score: String!, $matchStatsInput: MatchStatsInput!) {
-			addMatchStats(matchId: $matchId, winnerTeamName: $winnerTeamName, score: $score, matchStatsInput: $matchStatsInput) {
+		mutation AddMatchStats($matchId: String!, $score: ScoreInput!, $matchStatsInput: MatchStatsInput!, $mapName: String!, $mapNumber: Int!) {
+			addMatchStats(matchId: $matchId, score: $score, matchStatsInput: $matchStatsInput, mapName: $mapName, mapNumber: $mapNumber) {
 				id
 			}
 		}
 	`)
 
 	matchStatsInput := Dictionary{
-		"playerStats": []Dictionary{
-		},
-		"rounds": []Dictionary{
-		},
-		"teamStats": []Dictionary{
-		},
+		"playerStats": []Dictionary{},
+		"rounds":      []Dictionary{},
+		"teamStats":   []Dictionary{},
 	}
 
 	for _, player := range game.totalPlayerStats {
-		playerStat := Dictionary{
-			"playerSteamId": strconv.FormatUint(player.steamID, 10),
-			"side": "t",
-			"adp": player.tADP,
-			"adr": player.tADR,
-			"assists": player.assists,
-			"atd": player.atd,
-			"awpK": player.awpKills,
-			"damageDealt": player.tDamage,
-			"damageTaken": player.damageTaken,
-			"deaths": player.tDeaths,
-			"ef": player.ef,
-			"eft": player.enemyFlashTime,
-			"fAss": player.fAss,
-			"fDeaths": player.tOL,
-			"fireDamage": player.infernoDmg,
-			"fires": player.firesThrown,
-			"fiveK": player._5k,
-			"fourK": player._4k,
-			"threeK": player._3k,
-			"twoK": player._2k,
-			"fKills": player.tOK,
-			"flashes": player.flashThrown,
-			"hs": player.hs,
-			"impact": player.impactRating,
-			"iwr": player.iiwr,
-			"jumps": 0,
-			"kast": player.kast,
-			"kills": player.kills,
-			"kpa": player.killPointAvg,
-			"lurks": player.lurkRounds,
-			"mip": player.mip,
-			"nadeDamage": player.nadeDmg,
-			"nades": player.nadesThrown,
-			"oneVFive": player.cl_5,
-			"oneVFour": player.cl_4,
-			"oneVThree": player.cl_3,
-			"oneVTwo": player.cl_2,
-			"oneVOne": player.cl_1,
-			"ra": player.RA,
-			"rating": player.rating,
-			"rf": player.RF,
-			"rounds": player.tRounds,
-			"rwk": player.rwk,
-			"saves": player.saves,
-			"smokes": player.smokeThrown,
-			"suppR": player.suppRounds,
-			"suppX": player.suppDamage,
-			"traded": player.traded,
-			"trades": player.trades,
-			"ud": player.utilDmg,
-			"util": player.utilThrown,
-			"wlp": player.wlp,
-		}
+		playerStat := getPlayerAPIDict("b", player)
+
+		matchStatsInput["playerStats"] = append(matchStatsInput["playerStats"].([]Dictionary), playerStat)
+	}
+
+	for _, player := range game.tPlayerStats {
+		playerStat := getPlayerAPIDict("t", player)
+
+		matchStatsInput["playerStats"] = append(matchStatsInput["playerStats"].([]Dictionary), playerStat)
+	}
+
+	for _, player := range game.ctPlayerStats {
+		playerStat := getPlayerAPIDict("ct", player)
 
 		matchStatsInput["playerStats"] = append(matchStatsInput["playerStats"].([]Dictionary), playerStat)
 	}
 
 	for _, round := range game.rounds {
 		roundStat := Dictionary{
-			"ctPlayers": round.initCTerroristCount,
-			"tPlayers": round.initTerroristCount,
-			"defuserSteamId": strconv.FormatUint(round.defuser, 10),
-			"planterSteamId": strconv.FormatUint(round.planter, 10),
-			"roundLength": round.endingTick,
-			"roundNumber": round.roundNum,
+			"ctPlayers":           round.initCTerroristCount,
+			"tPlayers":            round.initTerroristCount,
+			"defuserSteamId":      strconv.FormatUint(round.defuser, 10),
+			"planterSteamId":      strconv.FormatUint(round.planter, 10),
+			"roundLength":         (round.endingTick - round.startingTick) / game.tickRate,
+			"roundNumber":         round.roundNum,
 			"roundWinnerTeamName": round.winnerClanName,
-			"sideWinner": strconv.Itoa(round.winnerENUM),
+			"sideWinner":          strconv.Itoa(round.winnerENUM),
 		}
 
 		matchStatsInput["rounds"] = append(matchStatsInput["rounds"].([]Dictionary), roundStat)
@@ -197,30 +162,39 @@ func addMatchStats(token string, game *game) {
 
 	for name, team := range game.totalTeamStats {
 		teamStat := Dictionary{
-			"teamName": name,
-			"clutches": team.clutches,
-			"deaths": team.deaths,
-			"ef": team.ef,
-			"fa": team.fass,
-			"fourVFives": team._4v5s,
-			"pistolsWon": team.pistolsW,
-			"rounds": 0,
+			"teamName":      name,
+			"clutches":      team.clutches,
+			"deaths":        team.deaths,
+			"ef":            team.ef,
+			"fa":            team.fass,
+			"fourVFives":    team._4v5s,
+			"pistolsWon":    team.pistolsW,
+			"rounds":        0,
 			"roundsAgainst": 0,
-			"roundsWon": 0,
-			"saves": 0,
-			"side": "t",
-			"traded": team.traded,
-			"ud": team.ud,
-			"util": team.util,
+			"roundsWon":     0,
+			"saves":         0,
+			"side":          "t",
+			"traded":        team.traded,
+			"ud":            team.ud,
+			"util":          team.util,
 			"wonFourVFives": team._4v5w,
 		}
 
 		matchStatsInput["teamStats"] = append(matchStatsInput["teamStats"].([]Dictionary), teamStat)
 	}
 
+	score := Dictionary{
+		"score":      game.result,
+		"team1Name":  game.teams[game.teamOrder[0]].name,
+		"team2Name":  game.teams[game.teamOrder[1]].name,
+		"team1Score": game.teams[game.teamOrder[0]].score,
+		"team2Score": game.teams[game.teamOrder[1]].score,
+	}
+
 	req.Var("matchId", game.coreID)
-	req.Var("winnerTeamName", game.winnerClanName)
-	req.Var("score", "16:14")
+	req.Var("score", score)
+	req.Var("mapName", game.mapName)
+	req.Var("mapNumber", game.mapNum)
 	req.Var("matchStatsInput", matchStatsInput)
 
 	req.Header.Set("Authorization", "JWT "+token)

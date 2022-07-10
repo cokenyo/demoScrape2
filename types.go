@@ -1,10 +1,11 @@
 package main
 
-
 type game struct {
 	//winnerID         int
 	coreID           string
+	mapNum           int
 	winnerClanName   string
+	result           string
 	rounds           []*round
 	potentialRound   *round
 	teams            map[string]*team
@@ -14,6 +15,8 @@ type game struct {
 	tickLength       int
 	roundsToWin      int //30 or 16
 	totalPlayerStats map[uint64]*playerStats
+	ctPlayerStats    map[uint64]*playerStats
+	tPlayerStats     map[uint64]*playerStats
 	totalTeamStats   map[string]*teamStats
 	playerOrder      []uint64
 	teamOrder        []string
@@ -241,7 +244,9 @@ type playerStats struct {
 	tRounds               int
 	ctRounds              int
 	ctRating              float64
+	ctImpactRating        float64
 	tRating               float64
+	tImpactRating         float64
 	tADP                  float64
 	ctADP                 float64
 
