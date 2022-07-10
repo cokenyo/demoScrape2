@@ -125,8 +125,8 @@ func beginOutput(game *game) {
 	}
 
 	//this shit needa die
-	result := "" + game.teams[game.teamOrder[0]].name + " " + strconv.Itoa(game.teams[game.teamOrder[0]].score) + " - " + strconv.Itoa(game.teams[game.teamOrder[1]].score) + " " + game.teams[game.teamOrder[1]].name
-	resultLine := []string{"1", game.mapName, result}
+	game.result = "" + game.teams[game.teamOrder[0]].name + " " + strconv.Itoa(game.teams[game.teamOrder[0]].score) + " - " + strconv.Itoa(game.teams[game.teamOrder[1]].score) + " " + game.teams[game.teamOrder[1]].name
+	resultLine := []string{"1", game.mapName, game.result}
 	records = append(records, [][]string{resultLine}...)
 
 	spacerLine := []string{" "}

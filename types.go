@@ -3,7 +3,9 @@ package main
 type game struct {
 	//winnerID         int
 	coreID           string
+	mapNum           int
 	winnerClanName   string
+	result           string
 	rounds           []*round
 	potentialRound   *round
 	teams            map[string]*team
@@ -242,7 +244,9 @@ type playerStats struct {
 	tRounds               int
 	ctRounds              int
 	ctRating              float64
+	ctImpactRating        float64
 	tRating               float64
+	tImpactRating         float64
 	tADP                  float64
 	ctADP                 float64
 

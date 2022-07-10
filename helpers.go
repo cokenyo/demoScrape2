@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
@@ -125,4 +126,65 @@ func playersWithArmor(game *game, team *common.TeamState) int {
 		}
 	}
 	return armor
+}
+
+func getPlayerAPIDict(side string, player *playerStats) Dictionary {
+
+	return Dictionary{
+		"playerSteamId": strconv.FormatUint(player.steamID, 10),
+		"side":          side,
+		"teamName":      player.teamClanName,
+		"adp":           player.deathPlacement,
+		"adr":           player.adr,
+		"assists":       player.assists,
+		"atd":           player.atd,
+		"awpK":          player.awpKills,
+		"damageDealt":   player.damage,
+		"damageTaken":   player.damageTaken,
+		"deaths":        player.deaths,
+		"eac":           player.eac,
+		"ef":            player.ef,
+		"eft":           player.enemyFlashTime,
+		"fAss":          player.fAss,
+		"fDeaths":       player.ol,
+		"fireDamage":    player.infernoDmg,
+		"fires":         player.firesThrown,
+		"fiveK":         player._5k,
+		"fourK":         player._4k,
+		"threeK":        player._3k,
+		"twoK":          player._2k,
+		"fKills":        player.ok,
+		"flashes":       player.flashThrown,
+		"hs":            player.hs,
+		"impact":        player.impactRating,
+		"iwr":           player.iiwr,
+		"jumps":         0,
+		"kast":          player.kast,
+		"kills":         player.kills,
+		"kpa":           player.killPointAvg,
+		"lurks":         player.lurkRounds,
+		"mip":           player.mip,
+		"nadeDamage":    player.nadeDmg,
+		"nades":         player.nadesThrown,
+		"oneVFive":      player.cl_5,
+		"oneVFour":      player.cl_4,
+		"oneVThree":     player.cl_3,
+		"oneVTwo":       player.cl_2,
+		"oneVOne":       player.cl_1,
+		"ra":            player.RA,
+		"rating":        player.rating,
+		"rf":            player.RF,
+		"rounds":        player.rounds,
+		"rwk":           player.rwk,
+		"rws":           player.rws,
+		"saves":         player.saves,
+		"smokes":        player.smokeThrown,
+		"suppR":         player.suppRounds,
+		"suppX":         player.suppDamage,
+		"traded":        player.traded,
+		"trades":        player.trades,
+		"ud":            player.utilDmg,
+		"util":          player.utilThrown,
+		"wlp":           player.wlp,
+	}
 }

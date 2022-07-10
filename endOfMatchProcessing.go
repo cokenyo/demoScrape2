@@ -180,7 +180,7 @@ func endOfMatchProcessing(game *game) {
 	}
 
 	calculateDerivedFields(game)
-
+	return
 }
 
 func calculateDerivedFields(game *game) {
@@ -291,38 +291,36 @@ func calculateDerivedFields(game *game) {
 		playerIPR = player.ctImpactPoints / float64(player.ctRounds)
 		playerWPR = player.ctWinPoints / float64(player.ctRounds)
 
-		ctImpactRating := 0.0
 		if player.ctTeamsWinPoints != 0 {
-			ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg)) + (0.3 * (playerWPR / (player.ctTeamsWinPoints / float64(player.ctWinPointsNormalizer))))
+			player.ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg)) + (0.3 * (playerWPR / (player.ctTeamsWinPoints / float64(player.ctWinPointsNormalizer))))
 		} else {
 			fmt.Println("UH 16-0?")
-			ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg))
+			player.ctImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / ctImpactRoundAvg))
 		}
 		playerDR = float64(player.ctDeaths) / float64(player.ctRounds)
 		playerRatingDeathComponent = (0.07 * (ctDeathRoundAvg / playerDR))
 		if player.ctDeaths == 0 || playerRatingDeathComponent > 0.21 {
 			playerRatingDeathComponent = 0.21
 		}
-		player.ctRating = (0.3 * ctImpactRating) + (0.35 * ((float64(player.ctKills) / float64(player.ctRounds)) / ctKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.ctKAST / ctKastRoundAvg)) + (0.2 * (player.ctADR / ctAdrAvg))
+		player.ctRating = (0.3 * player.ctImpactRating) + (0.35 * ((float64(player.ctKills) / float64(player.ctRounds)) / ctKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.ctKAST / ctKastRoundAvg)) + (0.2 * (player.ctADR / ctAdrAvg))
 
 		//tRating
 		openingFactor = (float64(player.tOK-player.tOL) / 13.0) + 1
 		playerIPR = player.tImpactPoints / float64(player.tRounds)
 		playerWPR = player.tWinPoints / float64(player.tRounds)
 
-		tImpactRating := 0.0
 		if player.tTeamsWinPoints != 0 {
-			tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg)) + (0.3 * (playerWPR / (player.tTeamsWinPoints / float64(player.tWinPointsNormalizer))))
+			player.tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg)) + (0.3 * (playerWPR / (player.tTeamsWinPoints / float64(player.tWinPointsNormalizer))))
 		} else {
 			fmt.Println("UH 16-0?")
-			tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg))
+			player.tImpactRating = (0.1 * float64(openingFactor)) + (0.6 * (playerIPR / tImpactRoundAvg))
 		}
 		playerDR = float64(player.tDeaths) / float64(player.tRounds)
 		playerRatingDeathComponent = (0.07 * (tDeathRoundAvg / playerDR))
 		if player.tDeaths == 0 || playerRatingDeathComponent > 0.21 {
 			playerRatingDeathComponent = 0.21
 		}
-		player.tRating = (0.3 * tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / tKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.tKAST / tKastRoundAvg)) + (0.2 * (player.tADR / tAdrAvg))
+		player.tRating = (0.3 * player.tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / tKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.tKAST / tKastRoundAvg)) + (0.2 * (player.tADR / tAdrAvg))
 
 		fmt.Println("openingFactor", (0.1 * float64(openingFactor)))
 		fmt.Println("playerIPR", (0.6 * (playerIPR / impactRoundAvg)))
@@ -339,6 +337,7 @@ func calculateDerivedFields(game *game) {
 	fmt.Println("adrAvg", adrAvg)
 
 	calculateSidedStats(game)
+	return
 }
 
 func calculateSidedStats(game *game) {
@@ -356,15 +355,110 @@ func calculateSidedStats(game *game) {
 			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
 
 			//add to round master stats
-			fmt.Println(game.rounds[i].roundNum)
 			for steam, player := range (*game.rounds[i]).playerStats {
-				sidedStats = game.ctPlayerStats
+				//sidedStats := make(map[uint64]*playerStats)
+				sidedStats := game.ctPlayerStats
 				if player.side == 2 {
 					sidedStats = game.tPlayerStats
+				}
+				if sidedStats[steam] == nil {
+					sidedStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamClanName: player.teamClanName}
+				}
+				sidedStats[steam].rounds += 1
+				sidedStats[steam].kills += player.kills
+				sidedStats[steam].assists += player.assists
+				sidedStats[steam].deaths += player.deaths
+				sidedStats[steam].damage += player.damage
+				sidedStats[steam].ticksAlive += player.ticksAlive
+				sidedStats[steam].deathPlacement += player.deathPlacement
+				sidedStats[steam].trades += player.trades
+				sidedStats[steam].traded += player.traded
+				sidedStats[steam].ok += player.ok
+				sidedStats[steam].ol += player.ol
+				sidedStats[steam].killPoints += player.killPoints
+				sidedStats[steam].cl_1 += player.cl_1
+				sidedStats[steam].cl_2 += player.cl_2
+				sidedStats[steam].cl_3 += player.cl_3
+				sidedStats[steam].cl_4 += player.cl_4
+				sidedStats[steam].cl_5 += player.cl_5
+				sidedStats[steam]._2k += player._2k
+				sidedStats[steam]._3k += player._3k
+				sidedStats[steam]._4k += player._4k
+				sidedStats[steam]._5k += player._5k
+				sidedStats[steam].nadeDmg += player.nadeDmg
+				sidedStats[steam].infernoDmg += player.infernoDmg
+				sidedStats[steam].utilDmg += player.utilDmg
+				sidedStats[steam].ef += player.ef
+				sidedStats[steam].fAss += player.fAss
+				sidedStats[steam].enemyFlashTime += player.enemyFlashTime
+				sidedStats[steam].hs += player.hs
+				sidedStats[steam].kastRounds += player.kastRounds
+				sidedStats[steam].saves += player.saves
+				sidedStats[steam].entries += player.entries
+				sidedStats[steam].impactPoints += player.impactPoints
+				sidedStats[steam].winPoints += player.winPoints
+				sidedStats[steam].awpKills += player.awpKills
+				sidedStats[steam].RF += player.RF
+				sidedStats[steam].RA += player.RA
+				sidedStats[steam].nadesThrown += player.nadesThrown
+				sidedStats[steam].smokeThrown += player.smokeThrown
+				sidedStats[steam].flashThrown += player.flashThrown
+				sidedStats[steam].firesThrown += player.firesThrown
+				sidedStats[steam].damageTaken += player.damageTaken
+				sidedStats[steam].suppDamage += player.suppDamage
+				sidedStats[steam].suppRounds += player.suppRounds
+				sidedStats[steam].rwk += player.rwk
+				sidedStats[steam].mip += player.mip
+				sidedStats[steam].eac += player.eac
+
+				if player.isBot {
+					sidedStats[steam].isBot = true
+				}
+
+				sidedStats[steam].lurkRounds += player.lurkRounds
+				if player.lurkRounds != 0 {
+					sidedStats[steam].wlp += player.winPoints
+				}
+
+				sidedStats[steam].rws += player.rws
+
+				if player.side == 2 {
+					sidedStats[steam].rating = game.totalPlayerStats[steam].tRating
+					sidedStats[steam].impactRating = game.totalPlayerStats[steam].tImpactRating
+				} else {
+					sidedStats[steam].rating = game.totalPlayerStats[steam].ctRating
+					sidedStats[steam].impactRating = game.totalPlayerStats[steam].ctImpactRating
 				}
 
 			}
 		}
+	}
+
+	for _, player := range game.ctPlayerStats {
+		player.atd = player.ticksAlive / player.rounds / game.tickRate
+		player.deathPlacement = player.deathPlacement / float64(player.deaths)
+		player.kast = player.kastRounds / float64(player.rounds)
+		player.killPointAvg = player.killPoints / float64(player.kills)
+		player.iiwr = player.winPoints / player.impactPoints
+		player.adr = float64(player.damage) / float64(player.rounds)
+		player.drDiff = player.adr - (float64(player.damageTaken) / float64(player.rounds))
+		player.tr = float64(player.traded) / float64(player.deaths)
+		player.kR = float64(player.kills) / float64(player.rounds)
+		player.utilThrown = player.smokeThrown + player.flashThrown + player.nadesThrown + player.firesThrown
+		player.rws = player.rws / float64(player.rounds)
+	}
+	for _, player := range game.tPlayerStats {
+		player.atd = player.ticksAlive / player.rounds / game.tickRate
+		player.deathPlacement = player.deathPlacement / float64(player.deaths)
+		player.kast = player.kastRounds / float64(player.rounds)
+		player.killPointAvg = player.killPoints / float64(player.kills)
+		player.iiwr = player.winPoints / player.impactPoints
+		player.adr = float64(player.damage) / float64(player.rounds)
+		player.drDiff = player.adr - (float64(player.damageTaken) / float64(player.rounds))
+		player.tr = float64(player.traded) / float64(player.deaths)
+		player.kR = float64(player.kills) / float64(player.rounds)
+		player.utilThrown = player.smokeThrown + player.flashThrown + player.nadesThrown + player.firesThrown
+		player.rws = player.rws / float64(player.rounds)
 	}
 
 	return

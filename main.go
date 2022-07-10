@@ -48,7 +48,7 @@ const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
 const ENABLE_WPA_DATA_OUTPUT = false
-const BACKEND_PUSHING = false
+const BACKEND_PUSHING = true
 
 const tradeCutoff = 4 // in seconds
 var multikillBonus = [...]float64{0, 0, 0.3, 0.7, 1.2, 2}
@@ -70,7 +70,6 @@ var killValues = map[string]float64{
 	"flashAssist":   0.2,
 	"assist":        0.15,
 }
-
 
 func main() {
 	input_dir := "in"
@@ -126,7 +125,9 @@ func processDemo(demoName string) {
 	tempCoreID := strings.Split(demoName, "mid")
 	if len(tempCoreID) > 1 {
 		//we have a CSC match
-		game.coreID = strings.Split(strings.Split(demoName, "mid")[1], ".")[0]
+		parsed := strings.Split(strings.Split(strings.Split(demoName, "mid")[1], ".")[0], "-")
+		game.coreID = parsed[0]
+		game.mapNum, _ = strconv.Atoi(strings.Split(parsed[1], "_")[0])
 	}
 
 	p := dem.NewParser(f)
@@ -1190,10 +1191,12 @@ func processDemo(demoName string) {
 	//we want to iterate through rounds backwards to make sure their are no repeats
 
 	endOfMatchProcessing(game)
+	beginOutput(game)
+	fmt.Println("coreID: ", game.coreID)
 
 	if BACKEND_PUSHING && game.coreID != "" {
 		token := authenticate()
-		if verifyOriginalMatch(token, game.coreID) || FORCE_NEW_STATS_UPLOAD {
+		if verifyOriginalMatch(token, game.coreID, game.mapNum) || FORCE_NEW_STATS_UPLOAD { //
 			addMatchStats(token, game)
 		}
 	} else if game.coreID != "" {
