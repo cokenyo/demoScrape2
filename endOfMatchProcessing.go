@@ -227,6 +227,17 @@ func calculateDerivedFields(game *game) {
 		player.ctADP = player.ctADP / float64(player.ctDeaths)
 		player.rws = player.rws / float64(player.rounds)
 
+		if player.deaths == 0 {
+			player.deathPlacement = 0
+			player.tr = .50
+		}
+		if player.tDeaths == 0 {
+			player.tADP = 0
+		}
+		if player.ctDeaths == 0 {
+			player.ctADP = 0
+		}
+
 		roundNormalizer += player.rounds
 		impactRoundAvg += player.impactPoints
 		killRoundAvg += float64(player.kills)
