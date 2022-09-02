@@ -1,0 +1,41 @@
+Arguments: 
+  /usr/local/bin/node /usr/share/yarn/bin/yarn.js add awk-sdk
+
+PATH: 
+  /home/dibes/.pyenv/plugins/pyenv-virtualenv/shims:/home/dibes/.pyenv/bin:/home/dibes/.cargo/bin:/home/dibes/.vscode-server/bin/e4503b30fc78200f846c62cf8091b76ff5547662/bin/remote-cli:/home/dibes/.pyenv/plugins/pyenv-virtualenv/shims:/home/dibes/.pyenv/bin:/home/dibes/.cargo/bin:/home/dibes/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/local/bin:/usr/local/go/bin:/usr/local/bin:/usr/local/go/bin
+
+Yarn version: 
+  1.22.17
+
+Node version: 
+  16.14.2
+
+Platform: 
+  linux x64
+
+Trace: 
+  Error: https://registry.yarnpkg.com/awk-sdk: Not found
+      at Request.params.callback [as _callback] (/usr/share/yarn/lib/cli.js:67029:18)
+      at Request.self.callback (/usr/share/yarn/lib/cli.js:140883:22)
+      at Request.emit (node:events:526:28)
+      at Request.<anonymous> (/usr/share/yarn/lib/cli.js:141855:10)
+      at Request.emit (node:events:526:28)
+      at IncomingMessage.<anonymous> (/usr/share/yarn/lib/cli.js:141777:12)
+      at Object.onceWrapper (node:events:645:28)
+      at IncomingMessage.emit (node:events:538:35)
+      at endReadableNT (node:internal/streams/readable:1345:12)
+      at processTicksAndRejections (node:internal/process/task_queues:83:21)
+
+npm manifest: 
+  {
+    "name": "demo-downloader",
+    "version": "1.0.0",
+    "main": "index.js",
+    "license": "MIT"
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
