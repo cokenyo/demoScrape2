@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
@@ -72,19 +73,21 @@ var killValues = map[string]float64{
 }
 
 func main() {
+	var wg sync.WaitGroup
 	input_dir := "in"
 	files, _ := ioutil.ReadDir(input_dir)
 
 	for _, file := range files {
 		filename := file.Name()
+		wg.Add(1)
 		if strings.HasSuffix(filename, ".dem") {
 			fmt.Println("processing", file.Name())
-			go processDemo(filepath.Join(input_dir, filename))
+			go processDemo(filepath.Join(input_dir, filename), &wg)
 		}
 	}
 
-	var input string
-	fmt.Scanln(&input)
+	wg.Wait()
+	os.Exit(0)
 }
 
 func initGameObject() *game {
@@ -107,7 +110,7 @@ func initGameObject() *game {
 	return &g
 }
 
-func processDemo(demoName string) {
+func processDemo(demoName string, wg *sync.WaitGroup) {
 
 	game := initGameObject()
 
@@ -1204,6 +1207,7 @@ func processDemo(demoName string) {
 	}
 
 	fmt.Println("Demo is complete!")
+	defer wg.Done()
 	//cleanup()
 
 }
