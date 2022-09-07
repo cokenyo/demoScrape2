@@ -116,10 +116,10 @@ async function processTier(tierName, bucketPrefix) {
 }
 
 async function main() {
-  const tiers = ["Premier", "Elite", "Challenger", "Prospect"];
+  const tiers = ["Premier", "Elite", "Challenger", "Contender", "Prospect"];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier], "s9/Combines/Combines-02");
+    await processTier(tiers[tier], "s9/Combines/Combines-04");
   }
 }
 
