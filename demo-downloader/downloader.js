@@ -20,57 +20,104 @@ function filterDemoByTier(data, tierName) {
   return data.Contents.filter((item) => item.Key.includes(tierName));
 }
 
-s3.listObjectsV2(
-  {
-    Bucket: "cscdemos",
-    Prefix: "s9/Combines/Combines-02",
-  },
-  (err, data) => {
-    const tierName = "Elite";
-    // Create ../in and ../out if they don't exist already
-    if (!fs.existsSync(`../in`)) {
-      fs.mkdirSync(`../in`);
-    }
+async function processTier(tierName, bucketPrefix) {
+  return new Promise((res) => {
+    s3.listObjectsV2(
+      {
+        Bucket: "cscdemos",
+        Prefix: bucketPrefix,
+      },
+      (err, data) => {
+        // Create ../out-monoliths folder if it doesn't exist
+        if (!fs.existsSync(`../out-monoliths`)) {
+          fs.mkdirSync(`../out-monoliths`);
+        }
 
-    if (!fs.existsSync(`../out`)) {
-      fs.mkdirSync(`../out`);
-    }
+        // Create ../in and ../out if they don't exist already
+        if (!fs.existsSync(`../in`)) {
+          fs.mkdirSync(`../in`);
+        }
 
-    // Clean the in and out folders one directory above
-    if (fs.existsSync(`../in`)) {
-      fs.readdirSync(`../in`).forEach((file) => {
-        fs.unlinkSync(`../in/${file}`);
-      });
-    }
-    if (fs.existsSync(`../out`)) {
-      fs.readdirSync(`../out`).forEach((file) => {
-        fs.unlinkSync(`../out/${file}`);
-      });
-    }
+        if (!fs.existsSync(`../out`)) {
+          fs.mkdirSync(`../out`);
+        }
 
-    // Download a single tiers demos
-    filterDemoByTier(data, tierName).forEach((item) => {
-      const fileName = item.Key.split("/")[item.Key.split("/").length - 1];
-      const filePath = `../in/${fileName}`;
-      console.log(`Downloading ${fileName}`);
-      s3.getObject(
-        {
-          Bucket: "cscdemos",
-          Key: item.Key,
-        },
-        (err, data) => {
-          // Save this to ./tierName/filename
-          console.log(`Saving ${fileName} to ${filePath.slice(0, -4)}`);
-          return JSZip.loadAsync(data.Body).then((zip) => {
-            zip
-              .file(fileName.slice(0, -4))
-              .async("nodebuffer")
-              .then((content) => {
-                fs.writeFileSync(filePath.slice(0, -4), content);
-              });
+        // Clean the in and out folders one directory above
+        if (fs.existsSync(`../in`)) {
+          fs.readdirSync(`../in`).forEach((file) => {
+            fs.unlinkSync(`../in/${file}`);
           });
         }
-      );
-    });
+        if (fs.existsSync(`../out`)) {
+          fs.readdirSync(`../out`).forEach((file) => {
+            fs.unlinkSync(`../out/${file}`);
+          });
+        }
+
+        const promises = [];
+
+        // Download a single tiers demos
+        filterDemoByTier(data, tierName).forEach((item) => {
+          const fileName = item.Key.split("/")[item.Key.split("/").length - 1];
+          const filePath = `../in/${fileName}`;
+          console.log(`Downloading ${fileName}`);
+          const promise = new Promise((res) => {
+            s3.getObject(
+              {
+                Bucket: "cscdemos",
+                Key: item.Key,
+              },
+              (err, data) => {
+                // Save this to ./tierName/filename
+                console.log(`Saving ${fileName} to ${filePath.slice(0, -4)}`);
+                return JSZip.loadAsync(data.Body).then((zip) => {
+                  zip
+                    .file(fileName.slice(0, -4))
+                    .async("nodebuffer")
+                    .then((content) => {
+                      fs.writeFileSync(filePath.slice(0, -4), content);
+                      res();
+                    });
+                });
+              }
+            );
+          });
+          promises.push(promise);
+        });
+
+        Promise.all(promises).then(() => {
+          // Run the go program from one directory above
+          console.log("Running go program...");
+          const { exec } = require("child_process");
+          exec("go run .", { cwd: "../" }, (err, stdout, stderr) => {
+            // Run the python script to generate monolith.py
+            console.log("Running python script...");
+            exec(
+              "python stitch_csvs.py",
+              { cwd: "../" },
+              (err, stdout, stderr) => {
+                // Move the monolith.py to root and name it tierName.csv
+                console.log("Moving monolith.csv to root...");
+                fs.renameSync(
+                  "../out/monolith.csv",
+                  `../out-monoliths/${tierName}.csv`
+                );
+                res();
+              }
+            );
+          });
+        });
+      }
+    );
+  });
+}
+
+async function main() {
+  const tiers = ["Premier", "Elite", "Challenger", "Prospect"];
+  // Process each tier
+  for (const tier in tiers) {
+    await processTier(tiers[tier], "s9/Combines/Combines-02");
   }
-);
+}
+
+main();
