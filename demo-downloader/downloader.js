@@ -100,7 +100,10 @@ async function processTier(tierName, bucketPrefix) {
                 console.log("Moving monolith.csv to root...");
                 fs.renameSync(
                   "../out/monolith.csv",
-                  `../out-monoliths/${tierName}.csv`
+                  `../out-monoliths/${bucketPrefix.replaceAll(
+                    "/",
+                    "-"
+                  )}-${tierName}.csv`
                 );
                 res();
               }
