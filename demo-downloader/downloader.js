@@ -88,27 +88,35 @@ async function processTier(tierName, bucketPrefix) {
         Promise.all(promises).then(() => {
           // Run the go program from one directory above
           console.log("Running go program...");
-          const { exec } = require("child_process");
-          exec("go run .", { cwd: "../" }, (err, stdout, stderr) => {
-            // Run the python script to generate monolith.py
-            console.log("Running python script...");
-            exec(
-              "python stitch_csvs.py",
-              { cwd: "../" },
-              (err, stdout, stderr) => {
-                // Move the monolith.py to root and name it tierName.csv
-                console.log("Moving monolith.csv to root...");
-                fs.renameSync(
-                  "../out/monolith.csv",
-                  `../out-monoliths/${bucketPrefix.replaceAll(
-                    "/",
-                    "-"
-                  )}-${tierName}.csv`
-                );
-                res();
+          setTimeout(() => {
+            const { exec } = require("child_process");
+            exec("go run .", { cwd: "../" }, (err, stdout, stderr) => {
+              if (err) {
+                console.error(`Error with stats parser\n ${err}`);
+                console.error(stderr);
+                return;
               }
-            );
-          });
+
+              // Run the python script to generate monolith.py
+              console.log("Running python script...");
+              exec(
+                "python stitch_csvs.py",
+                { cwd: "../", timeout: 1000 * 60 * 5 },
+                (err, stdout, stderr) => {
+                  // Move the monolith.py to root and name it tierName.csv
+                  console.log("Moving monolith.csv to root...");
+                  fs.renameSync(
+                    "../out/monolith.csv",
+                    `../out-monoliths/${bucketPrefix.replaceAll(
+                      "/",
+                      "-"
+                    )}-${tierName}.csv`
+                  );
+                  res();
+                }
+              );
+            });
+          }, 5000);
         });
       }
     );
@@ -119,7 +127,7 @@ async function main() {
   const tiers = ["Premier", "Elite", "Challenger", "Contender", "Prospect"];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier], "s9/Combines/Combines-04");
+    await processTier(tiers[tier], "s9/Combines/Combines-05");
   }
 }
 
