@@ -1193,7 +1193,7 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	err = p.ParseToEnd()
 	if err != nil {
 		if err.Error() == "demo stream ended unexpectedly (ErrUnexpectedEndOfDemo)" {
-			// Do nothing
+			fmt.Println("Ignoring ErrUnexpectedEndOfDemo to continue processing demo.")
 		} else {
 			panic(err)
 		}
