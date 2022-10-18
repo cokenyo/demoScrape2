@@ -147,12 +147,7 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	fmt.Println("Map is", game.mapName)
 
 	//set tick rate
-	tickRate := int(math.Round(p.TickRate()))
-	if (tickRate == 0) {
-		tickRate = 128
-		fmt.Println("Tick rate from the demo is 0, setting to 128")
-	}
-	game.tickRate = tickRate
+	game.tickRate = int(math.Round(p.TickRate()))
 	fmt.Println("Tick rate is", game.tickRate)
 
 	game.tickLength = header.PlaybackTicks
@@ -179,6 +174,11 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 		game.flags.hasGameStarted = true
 		game.flags.isGameLive = true
 		fmt.Println("GAME HAS STARTED!!!")
+
+		// In case the tickRate is 0 we want to re-set it based on the tickInterval now that the game has hasGameStarted
+		if (game.tickRate == 0) {
+			game.tickRate = int(math.Round(p.TickRate()))
+		}
 
 		game.teams = make(map[string]*team)
 
