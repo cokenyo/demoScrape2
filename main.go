@@ -147,7 +147,12 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	fmt.Println("Map is", game.mapName)
 
 	//set tick rate
-	game.tickRate = int(math.Round(p.TickRate()))
+	tickRate := int(math.Round(p.TickRate()))
+	if (tickRate == 0) {
+		tickRate = 128
+		fmt.Println("Tick rate from the demo is 0, setting to 128")
+	}
+	game.tickRate = tickRate
 	fmt.Println("Tick rate is", game.tickRate)
 
 	game.tickLength = header.PlaybackTicks
@@ -1187,7 +1192,11 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	// Parse to end
 	err = p.ParseToEnd()
 	if err != nil {
-		panic(err)
+		if err.Error() == "demo stream ended unexpectedly (ErrUnexpectedEndOfDemo)" {
+			// Do nothing
+		} else {
+			panic(err)
+		}
 	}
 
 	//----END OF MATCH PROCESSING----
