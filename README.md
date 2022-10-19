@@ -47,8 +47,10 @@ This will create a file named `monolith.csv` in your `out` folder.
 
 #### For Combines
 
+1. Go to main function in `downloader.js` and change second param of `processTier` to match the folder where combine demos are
 1. `node downloader.js`
 
 #### For In-Season
 
+1. Go to main function in `season-downloader.js` and change second param of `processTier` to match the folder where the match day you are processing is.
 1. `node season-downloader.js`
