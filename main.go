@@ -1113,7 +1113,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 			game.flags.postPlant = false
 			game.flags.postWinCon = true
 			game.potentialRound.endDueToBombEvent = true
-			game.potentialRound.playerStats[game.potentialRound.planter].impactPoints += 0.5
+			if game.potentialRound.planter != 0 {
+				game.potentialRound.playerStats[game.potentialRound.planter].impactPoints += 0.5
+			}
 		}
 	})
 

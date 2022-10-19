@@ -325,7 +325,7 @@ async function main() {
   ];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier].teams, tiers[tier].name, "s9/M05");
+    await processTier(tiers[tier].teams, tiers[tier].name, "s9/M04");
   }
 }
 
