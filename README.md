@@ -44,4 +44,11 @@ This will create a file named `monolith.csv` in your `out` folder.
 1. Install [yarn](https://classic.yarnpkg.com/en/docs/install#windows-stable)
 1. `cd demo-downloader`
 1. `yarn install`
+
+#### For Combines
+
 1. `node downloader.js`
+
+#### For In-Season
+
+1. `node season-downloader.js`
