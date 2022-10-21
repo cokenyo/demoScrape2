@@ -175,6 +175,11 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 		game.flags.isGameLive = true
 		fmt.Println("GAME HAS STARTED!!!")
 
+		// In case the tickRate is 0 we want to re-set it based on the tickInterval now that the game has hasGameStarted
+		if (game.tickRate == 0) {
+			game.tickRate = int(math.Round(p.TickRate()))
+		}
+
 		game.teams = make(map[string]*team)
 
 		teamTemp := p.GameState().TeamTerrorists()
@@ -1108,7 +1113,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 			game.flags.postPlant = false
 			game.flags.postWinCon = true
 			game.potentialRound.endDueToBombEvent = true
-			game.potentialRound.playerStats[game.potentialRound.planter].impactPoints += 0.5
+			if game.potentialRound.planter != 0 {
+				game.potentialRound.playerStats[game.potentialRound.planter].impactPoints += 0.5
+			}
 		}
 	})
 
@@ -1187,7 +1194,11 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	// Parse to end
 	err = p.ParseToEnd()
 	if err != nil {
-		panic(err)
+		if err.Error() == "demo stream ended unexpectedly (ErrUnexpectedEndOfDemo)" {
+			fmt.Println("Ignoring ErrUnexpectedEndOfDemo to continue processing demo.")
+		} else {
+			panic(err)
+		}
 	}
 
 	//----END OF MATCH PROCESSING----
