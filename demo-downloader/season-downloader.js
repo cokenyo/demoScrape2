@@ -40,6 +40,11 @@ async function processTier(teams, tierName, bucketPrefix) {
         Prefix: bucketPrefix,
       },
       (err, data) => {
+        if (err) {
+          console.log(err);
+          return;
+        }
+
         if (data == null) {
           console.log("Data is null, wrong path specified");
           return;
@@ -101,6 +106,12 @@ async function processTier(teams, tierName, bucketPrefix) {
           });
           promises.push(promise);
         });
+
+        if (promises.length === 0) {
+          console.log(`No demos found for ${tierName}`);
+          res();
+          return;
+        }
 
         Promise.all(promises).then(() => {
           // Run the go program from one directory above
@@ -325,7 +336,7 @@ async function main() {
   ];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier].teams, tiers[tier].name, "s9/M04");
+    await processTier(tiers[tier].teams, tiers[tier].name, "s9/M06");
   }
 }
 
