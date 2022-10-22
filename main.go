@@ -176,7 +176,7 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 		fmt.Println("GAME HAS STARTED!!!")
 
 		// In case the tickRate is 0 we want to re-set it based on the tickInterval now that the game has hasGameStarted
-		if (game.tickRate == 0) {
+		if game.tickRate == 0 {
 			game.tickRate = int(math.Round(p.TickRate()))
 		}
 
@@ -1055,9 +1055,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 
 	p.RegisterEventHandler(func(e events.PlayerFlashed) {
 		//fmt.Println("Player Flashed")
-		tick := float64(p.GameState().IngameTick())
-		blindTicks := e.FlashDuration().Seconds() * 128.0
 		if game.flags.isGameLive && e.Player != nil && e.Attacker != nil {
+			tick := float64(p.GameState().IngameTick())
+			blindTicks := e.FlashDuration().Seconds() * 128.0
 			victim := e.Player
 			flasher := e.Attacker
 			if flasher.Team != victim.Team && blindTicks > 128.0 && victim.IsAlive() && (float64(victim.FlashDuration) < (blindTicks/128.0 + 1)) {
