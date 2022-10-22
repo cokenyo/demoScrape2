@@ -114,6 +114,11 @@ async function processTier(teams, tierName, bucketPrefix) {
                 return;
               }
 
+              if (stderr) {
+                console.error(`Error with stats parser\n ${stderr}`);
+                return;
+              }
+
               // Run the python script to generate monolith.py
               console.log("Running python script...");
               exec(
