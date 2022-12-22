@@ -15,6 +15,16 @@ func isDuringExpectedRound(game *game, p dem.Parser) bool {
 	return (isPreWinCon || isAfterWinCon)
 }
 
+func printPlayers(game *game, team *common.TeamState) {
+	for _, teamMember := range team.Members() {
+		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
+			fmt.Println(teamMember, " is alive on team", team)
+		} else {
+			fmt.Println(teamMember, " is dead on team", team)
+		}
+	}
+}
+
 func validateTeamName(game *game, teamName string, teamNum common.Team) string {
 	if teamName != "" {
 		name := ""

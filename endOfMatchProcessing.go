@@ -213,6 +213,9 @@ func calculateDerivedFields(game *game) {
 		player.deathPlacement = player.deathPlacement / float64(player.deaths)
 		player.kast = player.kastRounds / float64(player.rounds)
 		player.killPointAvg = player.killPoints / float64(player.kills)
+		if player.kills == 0 {
+			player.killPointAvg = 0
+		}
 		player.iiwr = player.winPoints / player.impactPoints
 		player.adr = float64(player.damage) / float64(player.rounds)
 		player.drDiff = player.adr - (float64(player.damageTaken) / float64(player.rounds))
@@ -450,6 +453,9 @@ func calculateSidedStats(game *game) {
 		player.deathPlacement = player.deathPlacement / float64(player.deaths)
 		player.kast = player.kastRounds / float64(player.rounds)
 		player.killPointAvg = player.killPoints / float64(player.kills)
+		if player.kills == 0 {
+			player.killPointAvg = 0
+		}
 		player.iiwr = player.winPoints / player.impactPoints
 		player.adr = float64(player.damage) / float64(player.rounds)
 		player.drDiff = player.adr - (float64(player.damageTaken) / float64(player.rounds))
@@ -463,6 +469,9 @@ func calculateSidedStats(game *game) {
 		player.deathPlacement = player.deathPlacement / float64(player.deaths)
 		player.kast = player.kastRounds / float64(player.rounds)
 		player.killPointAvg = player.killPoints / float64(player.kills)
+		if player.kills == 0 {
+			player.killPointAvg = 0
+		}
 		player.iiwr = player.winPoints / player.impactPoints
 		player.adr = float64(player.damage) / float64(player.rounds)
 		player.drDiff = player.adr - (float64(player.damageTaken) / float64(player.rounds))
