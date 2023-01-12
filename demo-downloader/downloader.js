@@ -17,10 +17,14 @@ const s3 = new AWS.S3({
 console.log("Downloading...");
 
 function filterDemoByTier(data, tierName) {
-  return data.Contents.filter((item) => item.Key.includes(tierName));
+  return data.Contents.filter((item) => {
+    return item.Key.includes(tierName);
+  });
 }
 
 async function processTier(tierName, bucketPrefix) {
+  console.log(`Processing tier ${tierName}`);
+
   return new Promise((res) => {
     s3.listObjectsV2(
       {
@@ -87,36 +91,42 @@ async function processTier(tierName, bucketPrefix) {
 
         Promise.all(promises).then(() => {
           // Run the go program from one directory above
-          console.log("Running go program...");
-          setTimeout(() => {
-            const { exec } = require("child_process");
-            exec("go run .", { cwd: "../" }, (err, stdout, stderr) => {
-              if (err) {
-                console.error(`Error with stats parser\n ${err}`);
-                console.error(stderr);
-                return;
-              }
-
-              // Run the python script to generate monolith.py
-              console.log("Running python script...");
-              exec(
-                "python stitch_csvs.py",
-                { cwd: "../", timeout: 1000 * 60 * 5 },
-                (err, stdout, stderr) => {
-                  // Move the monolith.py to root and name it tierName.csv
-                  console.log("Moving monolith.csv to root...");
-                  fs.renameSync(
-                    "../out/monolith.csv",
-                    `../out-monoliths/${bucketPrefix.replaceAll(
-                      "/",
-                      "-"
-                    )}-${tierName}.csv`
-                  );
-                  res();
+          if (promises.length === 0) {
+            console.log("No demos found for this tier");
+            res();
+            return;
+          } else {
+            console.log("Running go program...");
+            setTimeout(() => {
+              const { exec } = require("child_process");
+              exec("go run .", { cwd: "../" }, (err, stdout, stderr) => {
+                if (err) {
+                  console.error(`Error with stats parser\n ${err}`);
+                  console.error(stderr);
+                  return;
                 }
-              );
-            });
-          }, 5000);
+
+                // Run the python script to generate monolith.py
+                console.log("Running python script...");
+                exec(
+                  "python stitch_csvs.py",
+                  { cwd: "../", timeout: 1000 * 60 * 5 },
+                  (err, stdout, stderr) => {
+                    // Move the monolith.py to root and name it tierName.csv
+                    console.log("Moving monolith.csv to root...");
+                    fs.renameSync(
+                      "../out/monolith.csv",
+                      `../out-monoliths/${bucketPrefix.replaceAll(
+                        "/",
+                        "-"
+                      )}-${tierName}.csv`
+                    );
+                    res();
+                  }
+                );
+              });
+            }, 5000);
+          }
         });
       }
     );
@@ -127,7 +137,7 @@ async function main() {
   const tiers = ["Premier", "Elite", "Challenger", "Contender", "Prospect"];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier], "s9/Combines/Combines-05");
+    await processTier(tiers[tier], "s10/combines/combines-04");
   }
 }
 
