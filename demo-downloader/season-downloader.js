@@ -183,7 +183,7 @@ async function main() {
       name: "Gloop Troop",
     },
     {
-      name: "Knights",
+      name: "Ribeye Rippers",
     },
     {
       name: "Xenon Czars",
@@ -195,7 +195,7 @@ async function main() {
       name: "Cyborgs",
     },
     {
-      name: "Astronomers",
+      name: "Krakens",
     },
     {
       name: "Eagles",
@@ -215,13 +215,13 @@ async function main() {
   ];
   const challenger = [
     {
-      name: "Vikings",
+      name: "Argonauts",
     },
     {
       name: "Falcons",
     },
     {
-      name: "Solar",
+      name: "Scallywags",
     },
     {
       name: "Muck Menaces",
@@ -239,7 +239,7 @@ async function main() {
       name: "Hitmen",
     },
     {
-      name: "Chemists",
+      name: "Angus Aimers",
     },
     {
       name: "Androids",
@@ -265,16 +265,16 @@ async function main() {
       name: "Shinobi",
     },
     {
-      name: "Spartans",
+      name: "Marauders",
     },
     {
       name: "Pho Fighters",
     },
     {
-      name: "Cosmic",
+      name: "Sirens",
     },
     {
-      name: "Physicists",
+      name: "Ground Beefers",
     },
     {
       name: "Ravens",
@@ -320,6 +320,12 @@ async function main() {
     {
       name: "Caracals",
     },
+    {
+      name: "Tridents",
+    },
+    {
+      name: "Keelhaulers",
+    },
   ];
   const tiers = [
     { name: "premier", teams: premier },
@@ -330,7 +336,7 @@ async function main() {
   ];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier].teams, tiers[tier].name, "s9/M04");
+    await processTier(tiers[tier].teams, tiers[tier].name, "s10/M02");
   }
 }
 
