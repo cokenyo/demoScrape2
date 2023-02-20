@@ -49,7 +49,7 @@ const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
 const ENABLE_WPA_DATA_OUTPUT = false
-const BACKEND_PUSHING = true
+const BACKEND_PUSHING = false
 
 const tradeCutoff = 4 // in seconds
 var multikillBonus = [...]float64{0, 0, 0.3, 0.7, 1.2, 2}
