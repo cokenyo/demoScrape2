@@ -76,9 +76,9 @@ async function processTier(tierName, bucketPrefix) {
                 console.log(`Saving ${fileName} to ${filePath.slice(0, -4)}`);
                 return JSZip.loadAsync(data.Body).then((zip) => {
                   const filename = Object.keys(zip.files)[0];
-
+                  console.log(filename, JSON.stringify(Object.keys(zip.files)));
                   zip
-                    .file(filename.slice(0, -4))
+                    .file(filename)
                     .async("nodebuffer")
                     .then((content) => {
                       fs.writeFileSync(filePath.slice(0, -4), content);
@@ -136,10 +136,10 @@ async function processTier(tierName, bucketPrefix) {
 }
 
 async function main() {
-  const tiers = ["Premier", "Elite", "Challenger", "Contender", "Prospect"];
+  const tiers = ["premier", "elite", "challenger", "contender", "prospect"];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier], "s10/combines/combines-07");
+    await processTier(tiers[tier], "s11/Combines/05-04");
   }
 }
 

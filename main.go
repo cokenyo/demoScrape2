@@ -230,7 +230,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 
 	initRound := func() {
 		game.flags.roundIntegrityStart = p.GameState().TotalRoundsPlayed() + 1
-		fmt.Println("We are starting round", game.flags.roundIntegrityStart)
+		if DEBUG {
+			fmt.Println("We are starting round", game.flags.roundIntegrityStart)
+		}
 
 		newRound := &round{roundNum: int8(game.flags.roundIntegrityStart), startingTick: p.GameState().IngameTick()}
 		newRound.playerStats = make(map[uint64]*playerStats)
@@ -264,7 +266,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 
 	processRoundOnWinCon := func(winnerClanName string) {
 		game.flags.roundIntegrityEnd = p.GameState().TotalRoundsPlayed() + 1
-		fmt.Println("We are processing round win con stuff", game.flags.roundIntegrityEnd)
+		if DEBUG {
+			fmt.Println("We are processing round win con stuff", game.flags.roundIntegrityEnd)
+		}
 
 		game.totalRounds = game.flags.roundIntegrityEnd
 
@@ -292,8 +296,10 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 			game.flags.roundIntegrityEndOfficial += 1
 			game.totalRounds = game.flags.roundIntegrityEndOfficial
 		}
-		fmt.Println("We are processing round final stuff", game.flags.roundIntegrityEndOfficial)
-		fmt.Println(len(game.rounds))
+		if DEBUG {
+			fmt.Println("We are processing round final stuff", game.flags.roundIntegrityEndOfficial)
+			fmt.Println(len(game.rounds))
+		}
 
 		//we have the entire round uninterrupted
 		if game.flags.roundIntegrityStart == game.flags.roundIntegrityEnd && game.flags.roundIntegrityEnd == game.flags.roundIntegrityEndOfficial {
@@ -547,7 +553,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 				for _, terrorist := range membersT {
 					if terrorist.IsAlive() {
 						if game.potentialRound.playerStats[terrorist.SteamID64] == nil {
-							fmt.Println(terrorist.Name)
+							if DEBUG {
+								fmt.Println(terrorist.Name)
+							}
 						}
 						dist := game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates
 						if dist < lurkerDist && dist > 0 {
@@ -564,14 +572,18 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.RoundStart) {
-		fmt.Println("Round Start", p.GameState().TotalRoundsPlayed())
+		if DEBUG {
+			fmt.Println("Round Start", p.GameState().TotalRoundsPlayed())
+		}
 
 		game.flags.roundStartedAt = p.GameState().IngameTick()
 
 	})
 
 	p.RegisterEventHandler(func(e events.RoundFreezetimeEnd) {
-		fmt.Printf("Round Freeze Time End\n")
+		if DEBUG {
+			fmt.Printf("Round Freeze Time End\n")
+		}
 		pistol := false
 
 		//we are going to check to see if the first pistol is actually starting
@@ -588,11 +600,15 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 				pistol = true
 			} else if membersT[0].Money()+membersT[0].MoneySpentThisRound() == 0 && membersCT[0].Money()+membersCT[0].MoneySpentThisRound() == 0 {
 				game.potentialRound.knifeRound = true
-				fmt.Println("------------KNIFEROUND-----------")
+				if DEBUG {
+					fmt.Println("------------KNIFEROUND-----------")
+				}
 				game.flags.hasGameStarted = false
 			}
 		}
-		fmt.Println("Has the Game Started?", game.flags.hasGameStarted)
+		if DEBUG {
+			fmt.Println("Has the Game Started?", game.flags.hasGameStarted)
+		}
 
 		if game.flags.isGameLive {
 			//init round stats
@@ -612,11 +628,11 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 		if game.flags.isGameLive {
 
 			game.flags.didRoundEndFire = true
+			if DEBUG {
+				fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
 
-			fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
-
-			fmt.Println("e.WinnerState.ID()", e.WinnerState.ID(), "and", "e.Winner", e.Winner, "and", "e.WinnerState.Team()", e.WinnerState.Team())
-
+				fmt.Println("e.WinnerState.ID()", e.WinnerState.ID(), "and", "e.Winner", e.Winner, "and", "e.WinnerState.Team()", e.WinnerState.Team())
+			}
 			validWinner := true
 			if e.Winner < 2 {
 				validWinner = false
@@ -637,8 +653,10 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 				//check last round
 				roundWinnerScore := game.teams[validateTeamName(game, e.WinnerState.ClanName(), e.WinnerState.Team())].score
 				roundLoserScore := game.teams[validateTeamName(game, e.LoserState.ClanName(), e.LoserState.Team())].score
-				fmt.Println("winner Rounds", roundWinnerScore)
-				fmt.Println("loser Rounds", roundLoserScore)
+				if DEBUG {
+					fmt.Println("winner Rounds", roundWinnerScore)
+					fmt.Println("loser Rounds", roundLoserScore)
+				}
 
 				if game.roundsToWin == 16 {
 					//check for normal win
@@ -676,7 +694,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 
 	//round end official doesnt fire on the last round
 	p.RegisterEventHandler(func(e events.ScoreUpdated) {
-		fmt.Printf("Score Updated\n")
+		if DEBUG {
+			fmt.Printf("Score Updated\n")
+		}
 
 		if game.flags.isGameLive && !game.flags.didRoundEndFire && e.NewScore > e.OldScore && game.winnerClanName == "" {
 			//we are replicating RoundEndEvent functionality because it did not fire
@@ -697,7 +717,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 				}
 			}
 
-			fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", winnerClanName, "won", "this determined from e.WinnerState.ClanName()")
+			if DEBUG {
+				fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", winnerClanName, "won", "this determined from e.WinnerState.ClanName()")
+			}
 
 			validWinner := true
 			if winnerEnum < 2 {
@@ -711,7 +733,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 
 			}
 
-			fmt.Println("ris", game.flags.roundIntegrityStart, "p.GS.TotalRounds", p.GameState().TotalRoundsPlayed())
+			if DEBUG {
+				fmt.Println("ris", game.flags.roundIntegrityStart, "p.GS.TotalRounds", p.GameState().TotalRoundsPlayed())
+			}
 
 			//we want to actually process the round
 			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
@@ -721,8 +745,10 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 				//check last round
 				roundWinnerScore := game.teams[validateTeamName(game, winnerClanName, e.TeamState.Team())].score
 				roundLoserScore := game.teams[validateTeamName(game, loserClanName, loserTeam)].score
-				fmt.Println("winner Rounds", roundWinnerScore)
-				fmt.Println("loser Rounds", roundLoserScore)
+				if DEBUG {
+					fmt.Println("winner Rounds", roundWinnerScore)
+					fmt.Println("loser Rounds", roundLoserScore)
+				}
 
 				if game.roundsToWin == 16 {
 					//check for normal win
@@ -761,13 +787,17 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	//round end official doesnt fire on the last round
 	p.RegisterEventHandler(func(e events.RoundEndOfficial) {
 
-		fmt.Printf("Round End Official\n")
+		if DEBUG {
+			fmt.Printf("Round End Official\n")
+		}
 
 		if !game.flags.didRoundEndFire {
 			game.flags.roundIntegrityEnd -= 1
 		}
 
-		fmt.Println("isGameLive", game.flags.isGameLive, "roundIntegrityEnd", game.flags.roundIntegrityEnd, "pTotalRoundsPlayed", p.GameState().TotalRoundsPlayed())
+		if DEBUG {
+			fmt.Println("isGameLive", game.flags.isGameLive, "roundIntegrityEnd", game.flags.roundIntegrityEnd, "pTotalRoundsPlayed", p.GameState().TotalRoundsPlayed())
+		}
 
 		if game.flags.isGameLive && game.flags.roundIntegrityEnd == p.GameState().TotalRoundsPlayed() {
 			processRoundFinal(false)
@@ -853,7 +883,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 						for _, terrorist := range membersT {
 							if terrorist.IsAlive() && e.Victim.SteamID64 != terrorist.SteamID64 {
 								game.flags.tClutchSteam = terrorist.SteamID64
-								fmt.Println("Clutch opportunity:", terrorist.Name, game.flags.tClutchVal)
+								if DEBUG {
+									fmt.Println("Clutch opportunity:", terrorist.Name, game.flags.tClutchVal)
+								}
 							}
 						}
 					}
@@ -863,7 +895,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 						for _, counterTerrorist := range membersCT {
 							if counterTerrorist.IsAlive() && e.Victim.SteamID64 != counterTerrorist.SteamID64 {
 								game.flags.ctClutchSteam = counterTerrorist.SteamID64
-								fmt.Println("Clutch opportunity:", counterTerrorist.Name, game.flags.ctClutchVal)
+								if DEBUG {
+									fmt.Println("Clutch opportunity:", counterTerrorist.Name, game.flags.ctClutchVal)
+								}
 							}
 						}
 					}
@@ -891,7 +925,7 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 					pS[e.Assister.SteamID64].fAss += 1
 					flashAssisted = true
 					flashAssister = e.Assister.Name
-					fmt.Println("VALVE FLASH ASSIST")
+					//fmt.Println("VALVE FLASH ASSIST")
 				} else if float64(p.GameState().IngameTick()) < pS[e.Victim.SteamID64].mostRecentFlashVal {
 					//this will trigger if there is both a flash assist and a damage assist
 					pS[pS[e.Victim.SteamID64].mostRecentFlasher].fAss += 1
@@ -1024,7 +1058,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 		if e.PenetratedObjects > 0 {
 			wallBang = " (WB)"
 		}
-		fmt.Printf("%s <%v%s%s> %s at %d flash assist by %s\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
+		if DEBUG {
+			fmt.Printf("%s <%v%s%s> %s at %d flash assist by %s\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
+		}
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerHurt) {
@@ -1069,7 +1105,7 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 				}
 
 			}
-			if flasher.Name != "" {
+			if flasher.Name != "" && printDebugLog {
 				debugMsg := fmt.Sprintf("%s flashed %s for %.2f at %d. He was %f blind.\n", flasher, victim, blindTicks/128, int(tick), victim.FlashDuration)
 				debugFile.WriteString(debugMsg)
 				debugFile.Sync()
@@ -1080,11 +1116,15 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.RoundImpactScoreData) {
-		fmt.Println("-------ROUNDIMPACTSCOREDATA", e.RawMessage)
+		if DEBUG {
+			fmt.Println("-------ROUNDIMPACTSCOREDATA", e.RawMessage)
+		}
 	})
 
 	p.RegisterEventHandler(func(e events.BombPlanted) {
-		fmt.Printf("Bomb Planted\n")
+		if DEBUG {
+			fmt.Printf("Bomb Planted\n")
+		}
 		if game.flags.isGameLive && !game.flags.postWinCon {
 			game.flags.prePlant = false
 			game.flags.postPlant = true
@@ -1095,7 +1135,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.BombDefused) {
-		fmt.Println("Bomb Defused by", e.BombEvent.Player.Name)
+		if DEBUG {
+			fmt.Println("Bomb Defused by", e.BombEvent.Player.Name)
+		}
 		if game.flags.isGameLive && !game.flags.postWinCon {
 			game.flags.prePlant = false
 			game.flags.postPlant = false
@@ -1107,7 +1149,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.BombExplode) {
-		fmt.Printf("Bomb Exploded\n")
+		if DEBUG {
+			fmt.Printf("Bomb Exploded\n")
+		}
 		if game.flags.isGameLive && !game.flags.postWinCon {
 			game.flags.prePlant = false
 			game.flags.postPlant = false
@@ -1136,7 +1180,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerTeamChange) {
-		fmt.Println("Player Changed Team:", e.Player, e.OldTeam, e.NewTeam)
+		if DEBUG {
+			fmt.Println("Player Changed Team:", e.Player, e.OldTeam, e.NewTeam)
+		}
 
 		if game.flags.isGameLive && game.flags.inRound {
 			if e.NewTeam > 1 {
@@ -1152,7 +1198,9 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerDisconnected) {
-		fmt.Println("Player DC", e.Player)
+		if DEBUG {
+			fmt.Println("Player DC", e.Player)
+		}
 
 		//update alive players
 		if game.flags.isGameLive {
@@ -1185,8 +1233,10 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	if printChatLog {
 		p.RegisterEventHandler(func(e events.ChatMessage) {
 			chatMsg := fmt.Sprintf("%s: \"%s\" at %d\n", e.Sender, e.Text, p.GameState().IngameTick())
-			chatFile.WriteString(chatMsg)
-			chatFile.Sync()
+			if printChatLog {
+				chatFile.WriteString(chatMsg)
+				chatFile.Sync()
+			}
 			//check(err)
 		})
 	}
@@ -1206,14 +1256,16 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 
 	endOfMatchProcessing(game)
 	beginOutput(game)
-	fmt.Println("coreID: ", game.coreID)
+	if DEBUG {
+		fmt.Println("coreID: ", game.coreID)
+	}
 
 	if BACKEND_PUSHING && game.coreID != "" {
 		token := authenticate()
 		if verifyOriginalMatch(token, game.coreID, game.mapNum) || FORCE_NEW_STATS_UPLOAD { //
 			addMatchStats(token, game)
 		}
-	} else if game.coreID != "" {
+	} else if game.coreID != "" && DEBUG {
 		fmt.Println("This is not a CSC demo D:")
 	}
 
