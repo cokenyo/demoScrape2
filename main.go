@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 
 	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
 	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
+	"github.com/remeh/sizedwaitgroup"
 )
 
 //TODO
@@ -73,20 +73,20 @@ var killValues = map[string]float64{
 }
 
 func main() {
-	var wg sync.WaitGroup
+	swg := sizedwaitgroup.New(2)
 	input_dir := "in"
 	files, _ := ioutil.ReadDir(input_dir)
 
 	for _, file := range files {
 		filename := file.Name()
-		wg.Add(1)
+		swg.Add()
 		if strings.HasSuffix(filename, ".dem") {
 			fmt.Println("processing", file.Name())
-			go processDemo(filepath.Join(input_dir, filename), &wg)
+			go processDemo(filepath.Join(input_dir, filename), &swg)
 		}
 	}
 
-	wg.Wait()
+	swg.Wait()
 	os.Exit(0)
 }
 
@@ -110,7 +110,8 @@ func initGameObject() *game {
 	return &g
 }
 
-func processDemo(demoName string, wg *sync.WaitGroup) {
+func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
+	//defer swg.Done()
 
 	game := initGameObject()
 
@@ -1270,7 +1271,7 @@ func processDemo(demoName string, wg *sync.WaitGroup) {
 	}
 
 	fmt.Println("Demo is complete!")
-	defer wg.Done()
+	defer swg.Done()
 	//cleanup()
 
 }

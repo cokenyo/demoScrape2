@@ -342,7 +342,7 @@ func calculateDerivedFields(game *game) {
 		fmt.Println("player.teamsWinPoints", player.teamsWinPoints)
 		fmt.Println("player.winPointsNormalizer", player.winPointsNormalizer)
 
-		fmt.Printf("%+v\n\n", player)
+		//fmt.Printf("%+v\n\n", player)
 	}
 	fmt.Println("impactRoundAvg", impactRoundAvg)
 	fmt.Println("killRoundAvg", killRoundAvg)
