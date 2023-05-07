@@ -41,7 +41,9 @@ func endOfMatchProcessing(game *game) {
 			}
 
 			//add to round master stats
-			fmt.Println(game.rounds[i].roundNum)
+			if DEBUG {
+				fmt.Println(game.rounds[i].roundNum)
+			}
 			for steam, player := range (*game.rounds[i]).playerStats {
 				if game.totalPlayerStats[steam] == nil {
 					game.totalPlayerStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamClanName: player.teamClanName}
@@ -336,19 +338,23 @@ func calculateDerivedFields(game *game) {
 		}
 		player.tRating = (0.3 * player.tImpactRating) + (0.35 * ((float64(player.tKills) / float64(player.tRounds)) / tKillRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.tKAST / tKastRoundAvg)) + (0.2 * (player.tADR / tAdrAvg))
 
-		fmt.Println("openingFactor", (0.1 * float64(openingFactor)))
-		fmt.Println("playerIPR", (0.6 * (playerIPR / impactRoundAvg)))
-		fmt.Println("playerWPR", (0.3 * (playerWPR / (player.teamsWinPoints / float64(player.winPointsNormalizer)))))
-		fmt.Println("player.teamsWinPoints", player.teamsWinPoints)
-		fmt.Println("player.winPointsNormalizer", player.winPointsNormalizer)
+		if DEBUG {
+			fmt.Println("openingFactor", (0.1 * float64(openingFactor)))
+			fmt.Println("playerIPR", (0.6 * (playerIPR / impactRoundAvg)))
+			fmt.Println("playerWPR", (0.3 * (playerWPR / (player.teamsWinPoints / float64(player.winPointsNormalizer)))))
+			fmt.Println("player.teamsWinPoints", player.teamsWinPoints)
+			fmt.Println("player.winPointsNormalizer", player.winPointsNormalizer)
 
-		//fmt.Printf("%+v\n\n", player)
+			fmt.Printf("%+v\n\n", player)
+		}
 	}
-	fmt.Println("impactRoundAvg", impactRoundAvg)
-	fmt.Println("killRoundAvg", killRoundAvg)
-	fmt.Println("deathRoundAvg", deathRoundAvg)
-	fmt.Println("kastRoundAvg", kastRoundAvg)
-	fmt.Println("adrAvg", adrAvg)
+	if DEBUG {
+		fmt.Println("impactRoundAvg", impactRoundAvg)
+		fmt.Println("killRoundAvg", killRoundAvg)
+		fmt.Println("deathRoundAvg", deathRoundAvg)
+		fmt.Println("kastRoundAvg", kastRoundAvg)
+		fmt.Println("adrAvg", adrAvg)
+	}
 
 	calculateSidedStats(game)
 	return

@@ -3,6 +3,7 @@ package main
 type game struct {
 	//winnerID         int
 	coreID           string
+	mid              string
 	mapNum           int
 	winnerClanName   string
 	result           string

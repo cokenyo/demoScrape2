@@ -145,16 +145,13 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 
 	//set map name
 	game.mapName = strings.Title((header.MapName)[3:])
-	fmt.Println("Map is", game.mapName)
-
 	//set tick rate
 	game.tickRate = int(math.Round(p.TickRate()))
-	fmt.Println("Tick rate is", game.tickRate)
+	fmt.Println("Tick rate is", game.tickRate, "| Map is", game.mapName)
 
 	game.tickLength = header.PlaybackTicks
 
 	//creating a file to dump chat log into
-	fmt.Printf("Creating chatLog file.\n")
 	os.Mkdir("out", 0777)
 	chatFile, chatFileErr := os.Create("out/chatLog.txt")
 	if chatFileErr != nil {
@@ -162,7 +159,6 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 	defer chatFile.Close()
 
-	fmt.Printf("Creating debug file.\n")
 	debugFile, debugFileErr := os.Create("out/debug.txt")
 	if debugFileErr != nil {
 		fmt.Printf("Error in opening debug file.\n")
@@ -1270,7 +1266,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		fmt.Println("This is not a CSC demo D:")
 	}
 
-	fmt.Println("Demo is complete!")
+	fmt.Println("Demo", game.mid, " is complete!")
 	defer swg.Done()
 	//cleanup()
 

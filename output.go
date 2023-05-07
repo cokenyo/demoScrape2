@@ -16,6 +16,7 @@ func beginOutput(game *game) {
 	setDisplayOrders(game)
 
 	m_ID := createHash(game)
+	game.mid = m_ID
 	fmt.Println("M_ID", m_ID)
 
 	if ENABLE_WPA_DATA_OUTPUT {
@@ -271,7 +272,7 @@ func teamOutput(m_ID string, game *game, team int) []string {
 }
 
 func createHash(game *game) string {
-	fmt.Println("headerTickL", game.tickLength)
+	//fmt.Println("headerTickL", game.tickLength)
 	hashValue := fmt.Sprint(game.tickLength)
 	totalDamage := 0
 	totalUD := 0
@@ -287,7 +288,7 @@ func createHash(game *game) string {
 	sort.Strings(s)
 	playerInitial = strings.Join(s, "")
 
-	fmt.Println("tick", hashValue)
+	//fmt.Println("tick", hashValue)
 	hashValue += fmt.Sprint(totalDamage) + playerInitial
 	hashValue = strings.Replace(hashValue, "|", "_", -1)
 
@@ -355,8 +356,8 @@ func setDisplayOrders(game *game) {
 			}
 		}
 	}
-	fmt.Println(game.teamOrder)
-	fmt.Println(game.playerOrder)
+	//fmt.Println(game.teamOrder)
+	//fmt.Println(game.playerOrder)
 }
 
 func adjustScoresForTiebreaks(game *game) {
