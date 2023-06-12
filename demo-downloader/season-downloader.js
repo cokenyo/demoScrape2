@@ -153,13 +153,16 @@ async function main() {
       name: "Copypastas",
     },
     {
-      name: "Radon Royals",
+      name: "Owls",
+    },
+    {
+      name: "Shogun",
     },
     {
       name: "VAC Veterans",
     },
     {
-      name: "Nade Stack",
+      name: "Radon Royals",
     },
     {
       name: "Marksmen",
@@ -168,10 +171,7 @@ async function main() {
       name: "Ooze Crew",
     },
     {
-      name: "Shogun",
-    },
-    {
-      name: "Nebula",
+      name: "Wagyu Warriors",
     },
   ];
   const elite = [
@@ -197,7 +197,7 @@ async function main() {
       name: "Cyborgs",
     },
     {
-      name: "Krakens",
+      name: "Hydras",
     },
     {
       name: "Eagles",
@@ -212,7 +212,10 @@ async function main() {
       name: "Mercenaries",
     },
     {
-      name: "Astral",
+      name: "Booty Hunters",
+    },
+    {
+      name: "Lions",
     },
   ];
   const challenger = [
@@ -232,7 +235,7 @@ async function main() {
       name: "Tilted Togglers",
     },
     {
-      name: "Lions",
+      name: "Leopards",
     },
     {
       name: "Pretty Penne",
@@ -258,6 +261,12 @@ async function main() {
     {
       name: "The Decoys",
     },
+    {
+      name: "Diviners",
+    },
+    {
+      name: "The Masters",
+    },
   ];
   const contender = [
     {
@@ -276,7 +285,7 @@ async function main() {
       name: "Sirens",
     },
     {
-      name: "Ground Beefers",
+      name: "Sirloin Sizzlers",
     },
     {
       name: "Ravens",
@@ -288,7 +297,7 @@ async function main() {
       name: "Assassins",
     },
     {
-      name: "Leopards",
+      name: "Cheetahs",
     },
     {
       name: "Sludge Squad",
@@ -296,25 +305,43 @@ async function main() {
     {
       name: "Nekomatas",
     },
+    {
+      name: "Storm",
+    },
+    {
+      name: "The Bachelors",
+    },
+    {
+      name: "Salty Scripters",
+    },
+    {
+      name: "Neon Knights",
+    },
+    {
+      name: "Fraggin Frogs",
+    },
+    {
+      name: "Necromancers",
+    },
   ];
   const prospect = [
     {
-      name: "Mathematicians",
+      name: "Brisket Bombers",
     },
     {
-      name: "Barbarians",
+      name: "Bigwelds",
     },
     {
       name: "Ronin",
     },
     {
-      name: "Hawks",
+      name: "Cardinals",
     },
     {
-      name: "Spaghets",
+      name: "Raging Rigatoni",
     },
     {
-      name: "Tanukis",
+      name: "Kittens",
     },
     {
       name: "Team Flash",
@@ -328,6 +355,56 @@ async function main() {
     {
       name: "Keelhaulers",
     },
+    {
+      name: "The Associates",
+    },
+    {
+      name: "Alchemists",
+    },
+    {
+      name: "Tactical Toads",
+    },
+    {
+      name: "Rain",
+    },
+    {
+      name: "Triggermen",
+    },
+    {
+      name: "Gunky Goons",
+    },
+  ];
+  const recruit = [
+    {
+      name: "Tanukis",
+    },
+    {
+      name: "Goshi",
+    },
+    {
+      name: "Mist",
+    },
+    {
+      name: "Servals",
+    },
+    {
+      name: "Tadpole Titans",
+    },
+    {
+      name: "Harpies",
+    },
+    {
+      name: "Nade Stack",
+    },
+    {
+      name: "Spaghets",
+    },
+    {
+      name: "Hawks",
+    },
+    {
+      name: "Scurvy SeaDogs",
+    },
   ];
   const tiers = [
     { name: "premier", teams: premier },
@@ -335,10 +412,11 @@ async function main() {
     { name: "challenger", teams: challenger },
     { name: "contender", teams: contender },
     { name: "prospect", teams: prospect },
+    { name: "recruit", teams: recruit },
   ];
   // Process each tier
   for (const tier in tiers) {
-    await processTier(tiers[tier].teams, tiers[tier].name, "s10/M02");
+    await processTier(tiers[tier].teams, tiers[tier].name, "s11/M1");
   }
 }
 
