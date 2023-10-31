@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
-	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
-	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
+	dem "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/common"
+	events "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/events"
+	"github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/msgs2"
 	"github.com/remeh/sizedwaitgroup"
 )
 
@@ -44,7 +45,7 @@ const DEBUG = false
 
 //const suppressNormalOutput = false
 
-//globals
+// globals
 const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
@@ -143,8 +144,6 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		panic(err)
 	}
 
-	//set map name
-	game.mapName = strings.Title((header.MapName)[3:])
 	//set tick rate
 	game.tickRate = int(math.Round(p.TickRate()))
 	fmt.Println("Tick rate is", game.tickRate, "| Map is", game.mapName)
@@ -185,18 +184,20 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		game.teams[validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())] = &team{name: validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())}
 
 		//to handle short and long matches
-		if p.GameState().ConVars()["mp_maxrounds"] != "30" {
-			maxRounds, fuckOFF := strconv.Atoi(p.GameState().ConVars()["mp_maxrounds"])
-			if fuckOFF == nil {
-				game.roundsToWin = maxRounds/2 + 1
-			} else {
-				//ADD TO ERROR LOG
-				game.roundsToWin = maxRounds/2 + 1
-				//maybe this gives us a way to check for short vs long match
-			}
-		} else {
-			game.roundsToWin = 16 //we will assume long match in case convar is not set
-		}
+		//TODO: DECIDE IF THIS IS STILL NEEDED
+		//if p.GameState().ConVars()["mp_maxrounds"] != "30" {
+		//	maxRounds, fuckOFF := strconv.Atoi(p.GameState().ConVars()["mp_maxrounds"])
+		//	if fuckOFF == nil {
+		//		game.roundsToWin = maxRounds/2 + 1
+		//	} else {
+		//		//ADD TO ERROR LOG
+		//		game.roundsToWin = maxRounds/2 + 1
+		//		//maybe this gives us a way to check for short vs long match
+		//	}
+		//} else {
+		//	game.roundsToWin = 16 //we will assume long match in case convar is not set
+		//}
+		game.roundsToWin = 13
 
 	}
 
@@ -262,7 +263,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	processRoundOnWinCon := func(winnerClanName string) {
-		game.flags.roundIntegrityEnd = p.GameState().TotalRoundsPlayed() + 1
+		//TODO: FIGURE OUT IF THIS IS CORRECT. I REMOVED +1 FROM TOTALROUNDSPLAYED
+		game.flags.roundIntegrityEnd = p.GameState().TotalRoundsPlayed()
 		if DEBUG {
 			fmt.Println("We are processing round win con stuff", game.flags.roundIntegrityEnd)
 		}
@@ -432,6 +434,10 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	//-------------ALL OUR EVENTS---------------------
+
+	p.RegisterNetMessageHandler(func(msg *msgs2.CSVCMsg_ServerInfo) {
+		game.mapName = *msg.MapName
+	})
 
 	p.RegisterEventHandler(func(e events.FrameDone) {
 		//fmt.Println("DIBES ", game.flags.isGameLive)
@@ -643,7 +649,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 			}
 
 			//we want to actually process the round
-			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
+			//TODO: VERIFY BEHAVIOR OF THIS. I REMOVED +1 FROM TOTALROUNDSPLAYED
+			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
 				game.potentialRound.winnerENUM = int(e.Winner)
 				processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName(), e.WinnerState.Team()))
 
@@ -679,6 +686,20 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 						//tie
 						game.winnerClanName = game.potentialRound.winnerClanName
 						processRoundFinal(true)
+					}
+				} else if game.roundsToWin == 13 {
+					//check for normal win
+					if roundWinnerScore == 13 && roundLoserScore < 12 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore > 12 { //check for OT win
+						overtime := ((roundWinnerScore+roundLoserScore)-24-1)/6 + 1
+						//OT win
+						if (roundWinnerScore-12-1)/3 == overtime {
+							game.winnerClanName = game.potentialRound.winnerClanName
+							processRoundFinal(true)
+						}
 					}
 				}
 			}
@@ -771,6 +792,20 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 						//tie
 						game.winnerClanName = game.potentialRound.winnerClanName
 						processRoundFinal(true)
+					}
+				} else if game.roundsToWin == 13 {
+					//check for normal win
+					if roundWinnerScore == 13 && roundLoserScore < 12 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore > 12 { //check for OT win
+						overtime := ((roundWinnerScore+roundLoserScore)-24-1)/6 + 1
+						//OT win
+						if (roundWinnerScore-12-1)/3 == overtime {
+							game.winnerClanName = game.potentialRound.winnerClanName
+							processRoundFinal(true)
+						}
 					}
 				}
 			}
