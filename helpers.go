@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
-	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
+	dem "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/common"
 )
 
 func isDuringExpectedRound(game *game, p dem.Parser) bool {
@@ -87,7 +87,7 @@ func calculateTeamEquipmentValue(game *game, team *common.TeamState) int {
 	return equipment
 }
 
-//works for grenades, needs to be modified for other types
+// works for grenades, needs to be modified for other types
 func calculateTeamEquipmentNum(game *game, team *common.TeamState, equipmentENUM int) int {
 	equipment := 0
 	for _, teamMember := range team.Members() {

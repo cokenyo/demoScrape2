@@ -3,16 +3,15 @@ package main
 import (
 	//"bufio"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
-	dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
-	common "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/common"
-	events "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs/events"
+	dem "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs"
+	common "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/common"
+	events "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/events"
+	"github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/msgs2"
 	"github.com/remeh/sizedwaitgroup"
 )
 
@@ -40,11 +39,11 @@ import (
 //TODO: convert rating calculations to a function
 //TODO: actually use killValues lmao
 
-const DEBUG = false
+const DEBUG = true
 
 //const suppressNormalOutput = false
 
-//globals
+// globals
 const printChatLog = true
 const printDebugLog = true
 const FORCE_NEW_STATS_UPLOAD = false
@@ -75,12 +74,12 @@ var killValues = map[string]float64{
 func main() {
 	swg := sizedwaitgroup.New(2)
 	input_dir := "in"
-	files, _ := ioutil.ReadDir(input_dir)
+	files, _ := os.ReadDir(input_dir)
 
 	for _, file := range files {
 		filename := file.Name()
-		swg.Add()
 		if strings.HasSuffix(filename, ".dem") {
+			swg.Add()
 			fmt.Println("processing", file.Name())
 			go processDemo(filepath.Join(input_dir, filename), &swg)
 		}
@@ -131,7 +130,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		//we have a CSC match
 		parsed := strings.Split(strings.Split(strings.Split(demoName, "mid")[1], ".")[0], "-")
 		game.coreID = parsed[0]
-		game.mapNum, _ = strconv.Atoi(strings.Split(parsed[1], "_")[0])
+		//game.mapNum, _ = strconv.Atoi(strings.Split(parsed[1], "_")[0])
+		game.mapNum = 0 //this will break the backend, is dep'd
 	}
 
 	p := dem.NewParser(f)
@@ -143,8 +143,6 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		panic(err)
 	}
 
-	//set map name
-	game.mapName = strings.Title((header.MapName)[3:])
 	//set tick rate
 	game.tickRate = int(math.Round(p.TickRate()))
 	fmt.Println("Tick rate is", game.tickRate, "| Map is", game.mapName)
@@ -185,18 +183,20 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		game.teams[validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())] = &team{name: validateTeamName(game, teamTemp.ClanName(), teamTemp.Team())}
 
 		//to handle short and long matches
-		if p.GameState().ConVars()["mp_maxrounds"] != "30" {
-			maxRounds, fuckOFF := strconv.Atoi(p.GameState().ConVars()["mp_maxrounds"])
-			if fuckOFF == nil {
-				game.roundsToWin = maxRounds/2 + 1
-			} else {
-				//ADD TO ERROR LOG
-				game.roundsToWin = maxRounds/2 + 1
-				//maybe this gives us a way to check for short vs long match
-			}
-		} else {
-			game.roundsToWin = 16 //we will assume long match in case convar is not set
-		}
+		//TODO: DECIDE IF THIS IS STILL NEEDED
+		//if p.GameState().ConVars()["mp_maxrounds"] != "30" {
+		//	maxRounds, fuckOFF := strconv.Atoi(p.GameState().ConVars()["mp_maxrounds"])
+		//	if fuckOFF == nil {
+		//		game.roundsToWin = maxRounds/2 + 1
+		//	} else {
+		//		//ADD TO ERROR LOG
+		//		game.roundsToWin = maxRounds/2 + 1
+		//		//maybe this gives us a way to check for short vs long match
+		//	}
+		//} else {
+		//	game.roundsToWin = 16 //we will assume long match in case convar is not set
+		//}
+		game.roundsToWin = 13
 
 	}
 
@@ -262,7 +262,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	processRoundOnWinCon := func(winnerClanName string) {
-		game.flags.roundIntegrityEnd = p.GameState().TotalRoundsPlayed() + 1
+		//TODO: FIGURE OUT IF THIS IS CORRECT. I REMOVED +1 FROM TOTALROUNDSPLAYED
+		game.flags.roundIntegrityEnd = p.GameState().TotalRoundsPlayed()
 		if DEBUG {
 			fmt.Println("We are processing round win con stuff", game.flags.roundIntegrityEnd)
 		}
@@ -290,7 +291,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		game.potentialRound.endingTick = p.GameState().IngameTick()
 		game.flags.roundIntegrityEndOfficial = p.GameState().TotalRoundsPlayed()
 		if lastRound {
-			game.flags.roundIntegrityEndOfficial += 1
+			//game.flags.roundIntegrityEndOfficial += 1
 			game.totalRounds = game.flags.roundIntegrityEndOfficial
 		}
 		if DEBUG {
@@ -425,6 +426,10 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 
 			//add our valid round
 			game.rounds = append(game.rounds, game.potentialRound)
+			if DEBUG {
+				fmt.Println("We are appending a round")
+			}
+
 		}
 
 		//endRound function functionality
@@ -432,6 +437,10 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	//-------------ALL OUR EVENTS---------------------
+
+	p.RegisterNetMessageHandler(func(msg *msgs2.CSVCMsg_ServerInfo) {
+		game.mapName = *msg.MapName
+	})
 
 	p.RegisterEventHandler(func(e events.FrameDone) {
 		//fmt.Println("DIBES ", game.flags.isGameLive)
@@ -626,7 +635,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 
 			game.flags.didRoundEndFire = true
 			if DEBUG {
-				fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
+				fmt.Println("Round", p.GameState().TotalRoundsPlayed(), "End", e.WinnerState.ClanName(), "won", "this determined from e.WinnerState.ClanName()")
 
 				fmt.Println("e.WinnerState.ID()", e.WinnerState.ID(), "and", "e.Winner", e.Winner, "and", "e.WinnerState.Team()", e.WinnerState.Team())
 			}
@@ -643,7 +652,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 			}
 
 			//we want to actually process the round
-			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed()+1 {
+			//TODO: VERIFY BEHAVIOR OF THIS. I REMOVED +1 FROM TOTALROUNDSPLAYED
+			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
 				game.potentialRound.winnerENUM = int(e.Winner)
 				processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName(), e.WinnerState.Team()))
 
@@ -680,6 +690,20 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 						game.winnerClanName = game.potentialRound.winnerClanName
 						processRoundFinal(true)
 					}
+				} else if game.roundsToWin == 13 {
+					//check for normal win
+					if roundWinnerScore == 13 && roundLoserScore < 12 {
+						//normal win
+						game.winnerClanName = game.potentialRound.winnerClanName
+						processRoundFinal(true)
+					} else if roundWinnerScore > 12 { //check for OT win
+						overtime := ((roundWinnerScore+roundLoserScore)-24-1)/6 + 1
+						//OT win
+						if (roundWinnerScore-12-1)/3 == overtime {
+							game.winnerClanName = game.potentialRound.winnerClanName
+							processRoundFinal(true)
+						}
+					}
 				}
 			}
 
@@ -691,94 +715,9 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 
 	//round end official doesnt fire on the last round
 	p.RegisterEventHandler(func(e events.ScoreUpdated) {
-		if DEBUG {
-			fmt.Printf("Score Updated\n")
-		}
-
-		if game.flags.isGameLive && !game.flags.didRoundEndFire && e.NewScore > e.OldScore && game.winnerClanName == "" {
-			//we are replicating RoundEndEvent functionality because it did not fire
-
-			//this TeamState will "always" be the winner, why update the losing team?
-			winnerEnum := e.TeamState.Team()
-			winnerClanName := e.TeamState.ClanName()
-			loserClanName := ""
-			loserTeam := common.TeamUnassigned
-			for teamName, _ := range game.teams {
-				if teamName != validateTeamName(game, winnerClanName, e.TeamState.Team()) {
-					loserClanName = teamName
-					if e.TeamState.Team() == 2 {
-						loserTeam = common.TeamCounterTerrorists
-					} else if e.TeamState.Team() == 3 {
-						loserTeam = common.TeamTerrorists
-					}
-				}
-			}
-
-			if DEBUG {
-				fmt.Println("Round", p.GameState().TotalRoundsPlayed()+1, "End", winnerClanName, "won", "this determined from e.WinnerState.ClanName()")
-			}
-
-			validWinner := true
-			if winnerEnum < 2 {
-				validWinner = false
-				//and set the integrity flag to false
-
-			} else if winnerEnum == 2 {
-				game.flags.tMoney = true
-			} else {
-				//we need to check if the game is over
-
-			}
-
-			if DEBUG {
-				fmt.Println("ris", game.flags.roundIntegrityStart, "p.GS.TotalRounds", p.GameState().TotalRoundsPlayed())
-			}
-
-			//we want to actually process the round
-			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
-				game.potentialRound.winnerENUM = int(winnerEnum)
-				processRoundOnWinCon(validateTeamName(game, winnerClanName, e.TeamState.Team()))
-
-				//check last round
-				roundWinnerScore := game.teams[validateTeamName(game, winnerClanName, e.TeamState.Team())].score
-				roundLoserScore := game.teams[validateTeamName(game, loserClanName, loserTeam)].score
-				if DEBUG {
-					fmt.Println("winner Rounds", roundWinnerScore)
-					fmt.Println("loser Rounds", roundLoserScore)
-				}
-
-				if game.roundsToWin == 16 {
-					//check for normal win
-					if roundWinnerScore == 16 && roundLoserScore < 15 {
-						//normal win
-						game.winnerClanName = game.potentialRound.winnerClanName
-						processRoundFinal(true)
-					} else if roundWinnerScore > 15 { //check for OT win
-						overtime := ((roundWinnerScore+roundLoserScore)-30-1)/6 + 1
-						//OT win
-						if (roundWinnerScore-15-1)/3 == overtime {
-							game.winnerClanName = game.potentialRound.winnerClanName
-							processRoundFinal(true)
-						}
-					}
-				} else if game.roundsToWin == 9 {
-					//check for normal win
-					if roundWinnerScore == 9 && roundLoserScore < 8 {
-						//normal win
-						game.winnerClanName = game.potentialRound.winnerClanName
-						processRoundFinal(true)
-					} else if roundWinnerScore == 8 && roundLoserScore == 8 { //check for tie
-						//tie
-						game.winnerClanName = game.potentialRound.winnerClanName
-						processRoundFinal(true)
-					}
-				}
-			}
-
-			//check last round
-			//or check overtime win
-
-		}
+		//CS2 swapped this event to be before RoundEnd
+		//We have relied on this as a back up for failed RoundEnd events
+		//may revisit depending on event reliability
 	})
 
 	//round end official doesnt fire on the last round
