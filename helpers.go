@@ -9,20 +9,34 @@ import (
 	common "github.com/markus-wa/demoinfocs-golang/v4/pkg/demoinfocs/common"
 )
 
+func getTeamMembers(team *common.TeamState, game *game, p dem.Parser) []*common.Player {
+	players := team.Members()
+	allPlayers := p.GameState().Participants().All()
+	// Filter players by the Team from the team state
+	teamPlayers := make([]*common.Player, 0)
+
+	for _, player := range players {
+		if player.Team == team.Team() {
+			teamPlayers = append(teamPlayers, player)
+		}
+	}
+
+	// Grab reconnected players
+	for steamId, connected := range game.reconnectedPlayers {
+		for _, player := range allPlayers {
+			if player.SteamID64 == steamId && player.Team == team.Team() && connected {
+				teamPlayers = append(teamPlayers, player)
+			}
+		}
+	}
+
+	return teamPlayers
+}
+
 func isDuringExpectedRound(game *game, p dem.Parser) bool {
 	isPreWinCon := (int(game.potentialRound.roundNum) == p.GameState().TotalRoundsPlayed()+1)
 	isAfterWinCon := (int(game.potentialRound.roundNum) == p.GameState().TotalRoundsPlayed() && game.flags.postWinCon)
 	return (isPreWinCon || isAfterWinCon)
-}
-
-func printPlayers(game *game, team *common.TeamState) {
-	for _, teamMember := range team.Members() {
-		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
-			fmt.Println(teamMember, " is alive on team", team)
-		} else {
-			fmt.Println(teamMember, " is dead on team", team)
-		}
-	}
 }
 
 func validateTeamName(game *game, teamName string, teamNum common.Team) string {
@@ -77,9 +91,9 @@ func validateTeamName(game *game, teamName string, teamNum common.Team) string {
 	}
 }
 
-func calculateTeamEquipmentValue(game *game, team *common.TeamState) int {
+func calculateTeamEquipmentValue(game *game, team *common.TeamState, p dem.Parser) int {
 	equipment := 0
-	for _, teamMember := range team.Members() {
+	for _, teamMember := range getTeamMembers(team, game, p) {
 		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
 			equipment += teamMember.EquipmentValueCurrent()
 		}
@@ -88,9 +102,9 @@ func calculateTeamEquipmentValue(game *game, team *common.TeamState) int {
 }
 
 // works for grenades, needs to be modified for other types
-func calculateTeamEquipmentNum(game *game, team *common.TeamState, equipmentENUM int) int {
+func calculateTeamEquipmentNum(game *game, team *common.TeamState, equipmentENUM int, p dem.Parser) int {
 	equipment := 0
-	for _, teamMember := range team.Members() {
+	for _, teamMember := range getTeamMembers(team, game, p) {
 		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
 			//fmt.Println(teamMember.Inventory)
 			//fmt.Println(teamMember.Weapons())
@@ -102,9 +116,9 @@ func calculateTeamEquipmentNum(game *game, team *common.TeamState, equipmentENUM
 	return equipment
 }
 
-func closestCTDisttoBomb(game *game, team *common.TeamState, bomb *common.Bomb) int {
+func closestCTDisttoBomb(game *game, team *common.TeamState, bomb *common.Bomb, p dem.Parser) int {
 	var distance int = 999999
-	for _, teamMember := range team.Members() {
+	for _, teamMember := range getTeamMembers(team, game, p) {
 		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
 			if bomb.Position().Distance(teamMember.Position()) < float64(distance) {
 				distance = int(bomb.Position().Distance(teamMember.Position()))
@@ -114,9 +128,9 @@ func closestCTDisttoBomb(game *game, team *common.TeamState, bomb *common.Bomb) 
 	return distance
 }
 
-func numOfKits(game *game, team *common.TeamState) int {
+func numOfKits(game *game, team *common.TeamState, p dem.Parser) int {
 	kits := 0
-	for _, teamMember := range team.Members() {
+	for _, teamMember := range getTeamMembers(team, game, p) {
 		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
 			if teamMember.HasDefuseKit() {
 				kits += 1
@@ -126,9 +140,9 @@ func numOfKits(game *game, team *common.TeamState) int {
 	return kits
 }
 
-func playersWithArmor(game *game, team *common.TeamState) int {
+func playersWithArmor(game *game, team *common.TeamState, p dem.Parser) int {
 	armor := 0
-	for _, teamMember := range team.Members() {
+	for _, teamMember := range getTeamMembers(team, game, p) {
 		if teamMember.IsAlive() && game.potentialRound.playerStats[teamMember.SteamID64].health > 0 {
 			if teamMember.Armor() > 0 {
 				armor += 1
