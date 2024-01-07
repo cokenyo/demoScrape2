@@ -90,7 +90,9 @@ func main() {
 }
 
 func initGameObject() *game {
-	g := game{}
+	g := game{
+		reconnectedPlayers: make(map[uint64]bool),
+	}
 	g.rounds = make([]*round, 0)
 	g.potentialRound = &round{}
 
@@ -144,7 +146,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	//set tick rate
-	game.tickRate = int(math.Round(p.TickRate()))
+	game.tickRate = 64
 	fmt.Println("Tick rate is", game.tickRate, "| Map is", game.mapName)
 
 	game.tickLength = header.PlaybackTicks
@@ -219,7 +221,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	initTeamPlayer := func(team *common.TeamState, currRoundObj *round) {
-		for _, teamMember := range team.Members() {
+		for _, teamMember := range getTeamMembers(team, game, p) {
 			player := &playerStats{name: teamMember.Name, steamID: teamMember.SteamID64, isBot: teamMember.IsBot, side: int(team.Team()), teamENUM: team.ID(), teamClanName: validateTeamName(game, team.ClanName(), team.Team()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
 			currRoundObj.playerStats[player.steamID] = player
 		}
@@ -253,8 +255,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		game.potentialRound = newRound
 
 		//track the number of people alive for clutch checking and record keeping
-		game.flags.tAlive = len(terrorists.Members())
-		game.flags.ctAlive = len(counterTerrorists.Members())
+		game.flags.tAlive = len(getTeamMembers(terrorists, game, p))
+		game.flags.ctAlive = len(getTeamMembers(counterTerrorists, game, p))
 		game.potentialRound.initTerroristCount = game.flags.tAlive
 		game.potentialRound.initCTerroristCount = game.flags.ctAlive
 
@@ -442,14 +444,24 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		game.mapName = *msg.MapName
 	})
 
+	p.RegisterEventHandler(func(e events.PlayerInfo) {
+		fmt.Println("PlayerInfo", e)
+		player := p.GameState().Participants().AllByUserID()[e.Index]
+		fmt.Println("PlayerInfo", p.GameState().Participants().AllByUserID())
+		if player != nil {
+			fmt.Println("PlayerInfo", player)
+			game.reconnectedPlayers[player.SteamID64] = true
+		}
+	})
+
 	p.RegisterEventHandler(func(e events.FrameDone) {
 		//fmt.Println("DIBES ", game.flags.isGameLive)
 		if game.flags.roundStartedAt > 0 && game.flags.roundStartedAt+(1*game.tickRate) > p.GameState().IngameTick() && !game.flags.haveInitRound {
 			pistol := false
 
 			//we are going to check to see if the first pistol is actually starting
-			membersT := p.GameState().TeamTerrorists().Members()
-			membersCT := p.GameState().TeamCounterTerrorists().Members()
+			membersT := getTeamMembers(p.GameState().TeamTerrorists(), game, p)
+			membersCT := getTeamMembers(p.GameState().TeamCounterTerrorists(), game, p)
 			if len(membersT) != 0 && len(membersCT) != 0 {
 				if membersT[0].Money()+membersT[0].MoneySpentThisRound() == 800 && membersCT[0].Money()+membersCT[0].MoneySpentThisRound() == 800 {
 					//start the game
@@ -508,20 +520,20 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 					tick:                p.GameState().IngameTick(),
 					ctAlive:             game.flags.ctAlive,
 					tAlive:              game.flags.tAlive,
-					ctEquipVal:          calculateTeamEquipmentValue(game, p.GameState().TeamCounterTerrorists()),
-					tEquipVal:           calculateTeamEquipmentValue(game, p.GameState().TeamTerrorists()),
-					ctFlashes:           calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 15),
-					ctSmokes:            calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 16),
-					ctMolys:             calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 17),
-					ctFrags:             calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 14),
-					tFlashes:            calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 15),
-					tSmokes:             calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 16),
-					tMolys:              calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 17),
-					tFrags:              calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 14),
-					closestCTDisttoBomb: closestCTDisttoBomb(game, p.GameState().TeamCounterTerrorists(), p.GameState().Bomb()),
-					kits:                numOfKits(game, p.GameState().TeamCounterTerrorists()),
-					ctArmor:             playersWithArmor(game, p.GameState().TeamCounterTerrorists()),
-					tArmor:              playersWithArmor(game, p.GameState().TeamTerrorists()),
+					ctEquipVal:          calculateTeamEquipmentValue(game, p.GameState().TeamCounterTerrorists(), p),
+					tEquipVal:           calculateTeamEquipmentValue(game, p.GameState().TeamTerrorists(), p),
+					ctFlashes:           calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 15, p),
+					ctSmokes:            calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 16, p),
+					ctMolys:             calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 17, p),
+					ctFrags:             calculateTeamEquipmentNum(game, p.GameState().TeamCounterTerrorists(), 14, p),
+					tFlashes:            calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 15, p),
+					tSmokes:             calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 16, p),
+					tMolys:              calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 17, p),
+					tFrags:              calculateTeamEquipmentNum(game, p.GameState().TeamTerrorists(), 14, p),
+					closestCTDisttoBomb: closestCTDisttoBomb(game, p.GameState().TeamCounterTerrorists(), p.GameState().Bomb(), p),
+					kits:                numOfKits(game, p.GameState().TeamCounterTerrorists(), p),
+					ctArmor:             playersWithArmor(game, p.GameState().TeamCounterTerrorists(), p),
+					tArmor:              playersWithArmor(game, p.GameState().TeamTerrorists(), p),
 				}
 				game.potentialRound.WPAlog = append(game.potentialRound.WPAlog, newWPAentry)
 			}
@@ -535,7 +547,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 
 			//check for lurker
 			if game.flags.tAlive > 2 && !game.flags.postWinCon && p.GameState().IngameTick() > (18*game.tickRate)+game.potentialRound.startingTick {
-				membersT := p.GameState().TeamTerrorists().Members()
+				membersT := getTeamMembers(p.GameState().TeamTerrorists(), game, p)
 				for _, terrorist := range membersT {
 					if terrorist.IsAlive() {
 						for _, teammate := range membersT {
@@ -593,8 +605,8 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		pistol := false
 
 		//we are going to check to see if the first pistol is actually starting
-		membersT := p.GameState().TeamTerrorists().Members()
-		membersCT := p.GameState().TeamCounterTerrorists().Members()
+		membersT := getTeamMembers(p.GameState().TeamTerrorists(), game, p)
+		membersCT := getTeamMembers(p.GameState().TeamCounterTerrorists(), game, p)
 		if len(membersT) != 0 && len(membersCT) != 0 {
 			if membersT[0].Money()+membersT[0].MoneySpentThisRound() == 800 && membersCT[0].Money()+membersCT[0].MoneySpentThisRound() == 800 {
 				//start the game
@@ -815,7 +827,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 				if !game.flags.postWinCon {
 					if game.flags.tAlive == 1 && game.flags.tClutchVal == 0 {
 						game.flags.tClutchVal = game.flags.ctAlive
-						membersT := p.GameState().TeamTerrorists().Members()
+						membersT := getTeamMembers(p.GameState().TeamTerrorists(), game, p)
 						for _, terrorist := range membersT {
 							if terrorist.IsAlive() && e.Victim.SteamID64 != terrorist.SteamID64 {
 								game.flags.tClutchSteam = terrorist.SteamID64
@@ -827,7 +839,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 					}
 					if game.flags.ctAlive == 1 && game.flags.ctClutchVal == 0 {
 						game.flags.ctClutchVal = game.flags.tAlive
-						membersCT := p.GameState().TeamCounterTerrorists().Members()
+						membersCT := getTeamMembers(p.GameState().TeamCounterTerrorists(), game, p)
 						for _, counterTerrorist := range membersCT {
 							if counterTerrorist.IsAlive() && e.Victim.SteamID64 != counterTerrorist.SteamID64 {
 								game.flags.ctClutchSteam = counterTerrorist.SteamID64
@@ -995,7 +1007,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 			wallBang = " (WB)"
 		}
 		if DEBUG {
-			fmt.Printf("%s <%v%s%s> %s at %d flash assist by %s\n", e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
+			fmt.Printf("%d %s <%v%s%s> %s at %d flash assist by %s\n", e.Victim.Team, e.Killer, e.Weapon, hs, wallBang, e.Victim, p.GameState().IngameTick(), flashAssister)
 		}
 	})
 
@@ -1136,6 +1148,9 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	p.RegisterEventHandler(func(e events.PlayerDisconnected) {
 		if DEBUG {
 			fmt.Println("Player DC", e.Player)
+			if game.reconnectedPlayers[e.Player.SteamID64] {
+				game.reconnectedPlayers[e.Player.SteamID64] = false
+			}
 		}
 
 		//update alive players
@@ -1143,13 +1158,13 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 			game.flags.tAlive = 0
 			game.flags.ctAlive = 0
 
-			membersT := p.GameState().TeamTerrorists().Members()
+			membersT := getTeamMembers(p.GameState().TeamTerrorists(), game, p)
 			for _, terrorist := range membersT {
 				if terrorist.IsAlive() {
 					game.flags.tAlive += 1
 				}
 			}
-			membersCT := p.GameState().TeamCounterTerrorists().Members()
+			membersCT := getTeamMembers(p.GameState().TeamCounterTerrorists(), game, p)
 			for _, counterTerrorist := range membersCT {
 				if counterTerrorist.IsAlive() {
 					game.flags.ctAlive += 1

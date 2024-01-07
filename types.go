@@ -2,27 +2,28 @@ package main
 
 type game struct {
 	//winnerID         int
-	coreID           string
-	mid              string
-	mapNum           int
-	winnerClanName   string
-	result           string
-	rounds           []*round
-	potentialRound   *round
-	teams            map[string]*team
-	flags            flag
-	mapName          string
-	tickRate         int
-	tickLength       int
-	roundsToWin      int //30 or 16
-	totalPlayerStats map[uint64]*playerStats
-	ctPlayerStats    map[uint64]*playerStats
-	tPlayerStats     map[uint64]*playerStats
-	totalTeamStats   map[string]*teamStats
-	playerOrder      []uint64
-	teamOrder        []string
-	totalRounds      int
-	totalWPAlog      []*wpalog
+	coreID             string
+	mid                string
+	mapNum             int
+	winnerClanName     string
+	result             string
+	rounds             []*round
+	potentialRound     *round
+	teams              map[string]*team
+	flags              flag
+	mapName            string
+	tickRate           int
+	tickLength         int
+	roundsToWin        int //30 or 16
+	totalPlayerStats   map[uint64]*playerStats
+	ctPlayerStats      map[uint64]*playerStats
+	tPlayerStats       map[uint64]*playerStats
+	totalTeamStats     map[string]*teamStats
+	reconnectedPlayers map[uint64]bool // Map of SteamID to reconnection status
+	playerOrder        []uint64
+	teamOrder          []string
+	totalRounds        int
+	totalWPAlog        []*wpalog
 }
 
 type flag struct {
