@@ -146,7 +146,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	//set tick rate
-	game.tickRate = int(math.Round(p.TickRate()))
+	game.tickRate = 64
 	fmt.Println("Tick rate is", game.tickRate, "| Map is", game.mapName)
 
 	game.tickLength = header.PlaybackTicks
@@ -450,9 +450,6 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		fmt.Println("PlayerInfo", p.GameState().Participants().AllByUserID())
 		if player != nil {
 			fmt.Println("PlayerInfo", player)
-			// if game.potentialRound.playerStats[player.SteamID64] == nil {
-			// 	game.potentialRound.playerStats[player.SteamID64] = &playerStats{name: player.Name, steamID: player.SteamID64, isBot: player.IsBot, side: int(player.Team), teamENUM: int(player.Team), teamClanName: validateTeamName(game, player.TeamState.ClanName(), player.TeamState.Team()), health: 100, tradeList: make(map[uint64]int), damageList: make(map[uint64]int)}
-			// }
 			game.reconnectedPlayers[player.SteamID64] = true
 		}
 	})
