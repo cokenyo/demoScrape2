@@ -15,16 +15,44 @@ func getTeamMembers(team *common.TeamState, game *game, p dem.Parser) []*common.
 	// Filter players by the Team from the team state
 	teamPlayers := make([]*common.Player, 0)
 
+	// Helper function to find player index in teamPlayers
+	findPlayerIndex := func(slice []*common.Player, steamId uint64) int {
+		for i, player := range slice {
+			if player.SteamID64 == steamId {
+				return i
+			}
+		}
+		return -1
+	}
+
 	for _, player := range players {
 		if player.Team == team.Team() {
+			if game.connectedAfterRoundStart[player.SteamID64] {
+				continue
+			}
 			teamPlayers = append(teamPlayers, player)
 		}
 	}
 
-	// Grab reconnected players
+	// Grab reconnected players and check for duplicates
 	for steamId, connected := range game.reconnectedPlayers {
+		if !connected {
+			continue
+		}
 		for _, player := range allPlayers {
-			if player.SteamID64 == steamId && player.Team == team.Team() && connected {
+			// If the player is in connectedAfterRoundStart, do not return them
+			if game.connectedAfterRoundStart[player.SteamID64] {
+				continue
+			}
+
+			if player.SteamID64 == steamId && player.Team == team.Team() {
+				// Check if player is already in teamPlayers
+				idx := findPlayerIndex(teamPlayers, steamId)
+				if idx != -1 {
+					// Remove the existing record
+					teamPlayers = append(teamPlayers[:idx], teamPlayers[idx+1:]...)
+				}
+				// Append the new record
 				teamPlayers = append(teamPlayers, player)
 			}
 		}

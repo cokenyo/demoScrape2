@@ -228,6 +228,9 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	}
 
 	initRound := func() {
+		// Reset the connectedAfterRoundStart
+		game.connectedAfterRoundStart = make(map[uint64]bool)
+
 		game.flags.roundIntegrityStart = p.GameState().TotalRoundsPlayed() + 1
 		if DEBUG {
 			fmt.Println("We are starting round", game.flags.roundIntegrityStart)
@@ -451,6 +454,9 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		if player != nil {
 			fmt.Println("PlayerInfo", player)
 			game.reconnectedPlayers[player.SteamID64] = true
+			if game.flags.inRound && game.flags.isGameLive {
+				game.connectedAfterRoundStart[player.SteamID64] = true
+			}
 		}
 	})
 
