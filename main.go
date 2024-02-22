@@ -1021,11 +1021,15 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		//fmt.Printf("Player Hurt\n")
 		if game.flags.isGameLive {
 			equipment := e.Weapon.Type
-			if e.Player != nil {
+			if e.Player != nil && game.potentialRound.playerStats[e.Player.SteamID64] != nil {
 				game.potentialRound.playerStats[e.Player.SteamID64].damageTaken += e.HealthDamageTaken
+			} else if e.Player != nil && e.Player.IsConnected {
+				//blow up
+				panic("We have a connected player who is not nil but no playerstats!")
 			}
-			if e.Player != nil && e.Attacker != nil && e.Player.Team != e.Attacker.Team {
+			if e.Player != nil && game.potentialRound.playerStats[e.Player.SteamID64] != nil && e.Attacker != nil && e.Player.Team != e.Attacker.Team {
 				game.potentialRound.playerStats[e.Attacker.SteamID64].damage += e.HealthDamageTaken
+				fmt.Println("Player Hurt\n", e.Attacker, e.HealthDamageTaken, e.Player)
 
 				//add to damage list for supp damage calc
 				game.potentialRound.playerStats[e.Player.SteamID64].damageList[e.Attacker.SteamID64] += e.HealthDamageTaken
