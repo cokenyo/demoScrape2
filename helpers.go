@@ -180,6 +180,30 @@ func playersWithArmor(game *game, team *common.TeamState, p dem.Parser) int {
 	return armor
 }
 
+var roundEndReasons = map[int]string{
+	0:  "StillInProgress", //base values
+	1:  "TargetBombed",
+	2:  "VIPEscaped",
+	3:  "VIPKilled",
+	4:  "TerroristsEscaped",
+	5:  "CTStoppedEscape",
+	6:  "TerroristsStopped",
+	7:  "BombDefused",
+	8:  "CTWin",
+	9:  "TerroristsWin",
+	10: "Draw",
+	11: "HostagesRescued",
+	12: "TargetSaved",
+	13: "HostagesNotRescued",
+	14: "TerroristsNotEscaped",
+	15: "VIPNotEscaped",
+	16: "GameStart",
+	17: "TerroristsSurrender",
+	18: "CTSurrender",
+	19: "TerroristsPlanted",
+	20: "CTsReachedHostage",
+}
+
 func getPlayerAPIDict(side string, player *playerStats) Dictionary {
 
 	return Dictionary{

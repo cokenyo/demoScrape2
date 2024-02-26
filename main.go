@@ -673,7 +673,7 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 			//TODO: VERIFY BEHAVIOR OF THIS. I REMOVED +1 FROM TOTALROUNDSPLAYED
 			if game.flags.isGameLive && validWinner && game.flags.roundIntegrityStart == p.GameState().TotalRoundsPlayed() {
 				game.potentialRound.winnerENUM = int(e.Winner)
-				game.potentialRound.roundEndReason = int(e.Reason)
+				game.potentialRound.roundEndReason = roundEndReasons[int(e.Reason)]
 				processRoundOnWinCon(validateTeamName(game, e.WinnerState.ClanName(), e.WinnerState.Team()))
 
 				//check last round
