@@ -5,169 +5,180 @@ import (
 	//dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 )
 
+func removeInvalidRounds(game *game) {
+	//we want to remove bad rounds (knife/veto rounds, incomplete rounds, redo rounds)
+	validRoundsMap := make(map[int8]bool)
+	validRounds := make([]*round, 0)
+	for i := len(game.rounds) - 1; i >= 0; i-- {
+		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
+		if game.rounds[i].integrityCheck && !game.rounds[i].knifeRound && !validRoundExists {
+			//this i-th round is good to add
+			validRoundsMap[game.rounds[i].roundNum] = true
+			validRounds = append(validRounds, game.rounds[i])
+		} else {
+			//this i-th round is bad and we will remove it
+		}
+	}
+	game.rounds = validRounds
+
+}
+
 func endOfMatchProcessing(game *game) {
+	removeInvalidRounds(game)
 
 	game.totalPlayerStats = make(map[uint64]*playerStats)
 	game.totalTeamStats = make(map[string]*teamStats)
 	game.totalWPAlog = make([]*wpalog, 0)
 
-	validRoundsMap := make(map[int8]bool)
 	for i := len(game.rounds) - 1; i >= 0; i-- {
-		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
-		if game.rounds[i].integrityCheck && !game.rounds[i].knifeRound && !validRoundExists {
-			//this i-th round is good to add
+		game.totalWPAlog = append(game.totalWPAlog, game.rounds[i].WPAlog...)
+		game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
 
-			game.totalWPAlog = append(game.totalWPAlog, game.rounds[i].WPAlog...)
+		for teamName, team := range game.rounds[i].teamStats {
+			if game.totalTeamStats[teamName] == nil && teamName != "" {
+				game.totalTeamStats[teamName] = &teamStats{}
+			}
+			game.totalTeamStats[teamName].pistols += team.pistols
+			game.totalTeamStats[teamName].pistolsW += team.pistolsW
+			game.totalTeamStats[teamName]._4v5s += team._4v5s
+			game.totalTeamStats[teamName]._4v5w += team._4v5w
+			game.totalTeamStats[teamName]._5v4s += team._5v4s
+			game.totalTeamStats[teamName]._5v4w += team._5v4w
+			game.totalTeamStats[teamName].saves += team.saves
+			game.totalTeamStats[teamName].clutches += team.clutches
+			game.totalTeamStats[teamName].ctR += team.ctR
+			game.totalTeamStats[teamName].ctRW += team.ctRW
+			game.totalTeamStats[teamName].tR += team.tR
+			game.totalTeamStats[teamName].tRW += team.tRW
+		}
 
-			validRoundsMap[game.rounds[i].roundNum] = true
-			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
+		//add to round master stats
+		if DEBUG {
+			fmt.Println(game.rounds[i].roundNum)
+		}
+		for steam, player := range (*game.rounds[i]).playerStats {
+			if game.totalPlayerStats[steam] == nil {
+				game.totalPlayerStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamClanName: player.teamClanName}
+			}
+			game.totalPlayerStats[steam].rounds += 1
+			game.totalPlayerStats[steam].kills += player.kills
+			game.totalPlayerStats[steam].assists += player.assists
+			game.totalPlayerStats[steam].deaths += player.deaths
+			game.totalPlayerStats[steam].damage += player.damage
+			game.totalPlayerStats[steam].ticksAlive += player.ticksAlive
+			game.totalPlayerStats[steam].deathPlacement += player.deathPlacement
+			game.totalPlayerStats[steam].trades += player.trades
+			game.totalPlayerStats[steam].traded += player.traded
+			game.totalPlayerStats[steam].ok += player.ok
+			game.totalPlayerStats[steam].ol += player.ol
+			game.totalPlayerStats[steam].killPoints += player.killPoints
+			game.totalPlayerStats[steam].cl_1 += player.cl_1
+			game.totalPlayerStats[steam].cl_2 += player.cl_2
+			game.totalPlayerStats[steam].cl_3 += player.cl_3
+			game.totalPlayerStats[steam].cl_4 += player.cl_4
+			game.totalPlayerStats[steam].cl_5 += player.cl_5
+			game.totalPlayerStats[steam]._2k += player._2k
+			game.totalPlayerStats[steam]._3k += player._3k
+			game.totalPlayerStats[steam]._4k += player._4k
+			game.totalPlayerStats[steam]._5k += player._5k
+			game.totalPlayerStats[steam].nadeDmg += player.nadeDmg
+			game.totalPlayerStats[steam].infernoDmg += player.infernoDmg
+			game.totalPlayerStats[steam].utilDmg += player.utilDmg
+			game.totalPlayerStats[steam].ef += player.ef
+			game.totalPlayerStats[steam].fAss += player.fAss
+			game.totalPlayerStats[steam].enemyFlashTime += player.enemyFlashTime
+			game.totalPlayerStats[steam].hs += player.hs
+			game.totalPlayerStats[steam].kastRounds += player.kastRounds
+			game.totalPlayerStats[steam].saves += player.saves
+			game.totalPlayerStats[steam].entries += player.entries
+			game.totalPlayerStats[steam].impactPoints += player.impactPoints
+			game.totalPlayerStats[steam].winPoints += player.winPoints
+			game.totalPlayerStats[steam].awpKills += player.awpKills
+			game.totalPlayerStats[steam].RF += player.RF
+			game.totalPlayerStats[steam].RA += player.RA
+			game.totalPlayerStats[steam].nadesThrown += player.nadesThrown
+			game.totalPlayerStats[steam].smokeThrown += player.smokeThrown
+			game.totalPlayerStats[steam].flashThrown += player.flashThrown
+			game.totalPlayerStats[steam].firesThrown += player.firesThrown
+			game.totalPlayerStats[steam].damageTaken += player.damageTaken
+			game.totalPlayerStats[steam].suppDamage += player.suppDamage
+			game.totalPlayerStats[steam].suppRounds += player.suppRounds
+			game.totalPlayerStats[steam].rwk += player.rwk
+			game.totalPlayerStats[steam].mip += player.mip
+			game.totalPlayerStats[steam].eac += player.eac
 
-			for teamName, team := range game.rounds[i].teamStats {
-				if game.totalTeamStats[teamName] == nil && teamName != "" {
-					game.totalTeamStats[teamName] = &teamStats{}
-				}
-				game.totalTeamStats[teamName].pistols += team.pistols
-				game.totalTeamStats[teamName].pistolsW += team.pistolsW
-				game.totalTeamStats[teamName]._4v5s += team._4v5s
-				game.totalTeamStats[teamName]._4v5w += team._4v5w
-				game.totalTeamStats[teamName]._5v4s += team._5v4s
-				game.totalTeamStats[teamName]._5v4w += team._5v4w
-				game.totalTeamStats[teamName].saves += team.saves
-				game.totalTeamStats[teamName].clutches += team.clutches
-				game.totalTeamStats[teamName].ctR += team.ctR
-				game.totalTeamStats[teamName].ctRW += team.ctRW
-				game.totalTeamStats[teamName].tR += team.tR
-				game.totalTeamStats[teamName].tRW += team.tRW
+			if player.isBot {
+				game.totalPlayerStats[steam].isBot = true
 			}
 
-			//add to round master stats
-			if DEBUG {
-				fmt.Println(game.rounds[i].roundNum)
+			if player.RF == 1 {
+				game.rounds[i].winTeamDmg += player.damage
 			}
-			for steam, player := range (*game.rounds[i]).playerStats {
-				if game.totalPlayerStats[steam] == nil {
-					game.totalPlayerStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamClanName: player.teamClanName}
-				}
-				game.totalPlayerStats[steam].rounds += 1
-				game.totalPlayerStats[steam].kills += player.kills
-				game.totalPlayerStats[steam].assists += player.assists
-				game.totalPlayerStats[steam].deaths += player.deaths
-				game.totalPlayerStats[steam].damage += player.damage
-				game.totalPlayerStats[steam].ticksAlive += player.ticksAlive
-				game.totalPlayerStats[steam].deathPlacement += player.deathPlacement
-				game.totalPlayerStats[steam].trades += player.trades
-				game.totalPlayerStats[steam].traded += player.traded
-				game.totalPlayerStats[steam].ok += player.ok
-				game.totalPlayerStats[steam].ol += player.ol
-				game.totalPlayerStats[steam].killPoints += player.killPoints
-				game.totalPlayerStats[steam].cl_1 += player.cl_1
-				game.totalPlayerStats[steam].cl_2 += player.cl_2
-				game.totalPlayerStats[steam].cl_3 += player.cl_3
-				game.totalPlayerStats[steam].cl_4 += player.cl_4
-				game.totalPlayerStats[steam].cl_5 += player.cl_5
-				game.totalPlayerStats[steam]._2k += player._2k
-				game.totalPlayerStats[steam]._3k += player._3k
-				game.totalPlayerStats[steam]._4k += player._4k
-				game.totalPlayerStats[steam]._5k += player._5k
-				game.totalPlayerStats[steam].nadeDmg += player.nadeDmg
-				game.totalPlayerStats[steam].infernoDmg += player.infernoDmg
-				game.totalPlayerStats[steam].utilDmg += player.utilDmg
-				game.totalPlayerStats[steam].ef += player.ef
-				game.totalPlayerStats[steam].fAss += player.fAss
-				game.totalPlayerStats[steam].enemyFlashTime += player.enemyFlashTime
-				game.totalPlayerStats[steam].hs += player.hs
-				game.totalPlayerStats[steam].kastRounds += player.kastRounds
-				game.totalPlayerStats[steam].saves += player.saves
-				game.totalPlayerStats[steam].entries += player.entries
-				game.totalPlayerStats[steam].impactPoints += player.impactPoints
-				game.totalPlayerStats[steam].winPoints += player.winPoints
-				game.totalPlayerStats[steam].awpKills += player.awpKills
-				game.totalPlayerStats[steam].RF += player.RF
-				game.totalPlayerStats[steam].RA += player.RA
-				game.totalPlayerStats[steam].nadesThrown += player.nadesThrown
-				game.totalPlayerStats[steam].smokeThrown += player.smokeThrown
-				game.totalPlayerStats[steam].flashThrown += player.flashThrown
-				game.totalPlayerStats[steam].firesThrown += player.firesThrown
-				game.totalPlayerStats[steam].damageTaken += player.damageTaken
-				game.totalPlayerStats[steam].suppDamage += player.suppDamage
-				game.totalPlayerStats[steam].suppRounds += player.suppRounds
-				game.totalPlayerStats[steam].rwk += player.rwk
-				game.totalPlayerStats[steam].mip += player.mip
-				game.totalPlayerStats[steam].eac += player.eac
 
-				if player.isBot {
-					game.totalPlayerStats[steam].isBot = true
+			if player.side == 2 {
+				game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initTerroristCount
+				game.totalPlayerStats[steam].tImpactPoints += player.impactPoints
+				game.totalPlayerStats[steam].tWinPoints += player.winPoints
+				game.totalPlayerStats[steam].tOK += player.ok
+				game.totalPlayerStats[steam].tOL += player.ol
+				game.totalPlayerStats[steam].tKills += player.kills
+				game.totalPlayerStats[steam].tDeaths += player.deaths
+				game.totalPlayerStats[steam].tKASTRounds += player.kastRounds
+				game.totalPlayerStats[steam].tDamage += player.damage
+				game.totalPlayerStats[steam].tADP += player.deathPlacement
+				//game.totalPlayerStats[steam].tTeamsWinPoints +=
+				game.totalPlayerStats[steam].tWinPointsNormalizer += game.rounds[i].initTerroristCount
+				game.totalPlayerStats[steam].tRounds += 1
+				game.totalPlayerStats[steam].tRF += player.RF
+				game.totalPlayerStats[steam].lurkRounds += player.lurkRounds
+				if player.lurkRounds != 0 {
+					game.totalPlayerStats[steam].wlp += player.winPoints
 				}
 
-				if player.RF == 1 {
-					game.rounds[i].winTeamDmg += player.damage
-				}
+				game.rounds[i].teamStats[player.teamClanName].tWinPoints += player.winPoints
+				game.rounds[i].teamStats[player.teamClanName].tImpactPoints += player.impactPoints
+			} else if player.side == 3 {
+				game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initCTerroristCount
+				game.totalPlayerStats[steam].ctImpactPoints += player.impactPoints
+				game.totalPlayerStats[steam].ctWinPoints += player.winPoints
+				game.totalPlayerStats[steam].ctOK += player.ok
+				game.totalPlayerStats[steam].ctOL += player.ol
+				game.totalPlayerStats[steam].ctKills += player.kills
+				game.totalPlayerStats[steam].ctDeaths += player.deaths
+				game.totalPlayerStats[steam].ctKASTRounds += player.kastRounds
+				game.totalPlayerStats[steam].ctDamage += player.damage
+				game.totalPlayerStats[steam].ctADP += player.deathPlacement
+				//game.totalPlayerStats[steam].tTeamsWinPoints +=
+				game.totalPlayerStats[steam].ctWinPointsNormalizer += game.rounds[i].initCTerroristCount
+				game.totalPlayerStats[steam].ctRounds += 1
+				game.totalPlayerStats[steam].ctAWP += player.ctAWP
 
-				if player.side == 2 {
-					game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initTerroristCount
-					game.totalPlayerStats[steam].tImpactPoints += player.impactPoints
-					game.totalPlayerStats[steam].tWinPoints += player.winPoints
-					game.totalPlayerStats[steam].tOK += player.ok
-					game.totalPlayerStats[steam].tOL += player.ol
-					game.totalPlayerStats[steam].tKills += player.kills
-					game.totalPlayerStats[steam].tDeaths += player.deaths
-					game.totalPlayerStats[steam].tKASTRounds += player.kastRounds
-					game.totalPlayerStats[steam].tDamage += player.damage
-					game.totalPlayerStats[steam].tADP += player.deathPlacement
-					//game.totalPlayerStats[steam].tTeamsWinPoints +=
-					game.totalPlayerStats[steam].tWinPointsNormalizer += game.rounds[i].initTerroristCount
-					game.totalPlayerStats[steam].tRounds += 1
-					game.totalPlayerStats[steam].tRF += player.RF
-					game.totalPlayerStats[steam].lurkRounds += player.lurkRounds
-					if player.lurkRounds != 0 {
-						game.totalPlayerStats[steam].wlp += player.winPoints
+				game.rounds[i].teamStats[player.teamClanName].ctWinPoints += player.winPoints
+				game.rounds[i].teamStats[player.teamClanName].ctImpactPoints += player.impactPoints
+			}
+
+			game.rounds[i].teamStats[player.teamClanName].winPoints += player.winPoints
+			game.rounds[i].teamStats[player.teamClanName].impactPoints += player.impactPoints
+
+		}
+		for steam, player := range (*game.rounds[i]).playerStats {
+			game.totalPlayerStats[steam].teamsWinPoints += game.rounds[i].teamStats[player.teamClanName].winPoints
+			game.totalPlayerStats[steam].tTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].tWinPoints
+			game.totalPlayerStats[steam].ctTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].ctWinPoints
+
+			//give players rws
+			if player.RF != 0 {
+				if game.rounds[i].endDueToBombEvent {
+					player.rws = 70 * (float64(player.damage) / float64(game.rounds[i].winTeamDmg))
+					if player.side == 2 && game.rounds[i].planter == player.steamID {
+						player.rws += 30
+					} else if player.side == 3 && game.rounds[i].defuser == player.steamID {
+						player.rws += 30
 					}
-
-					game.rounds[i].teamStats[player.teamClanName].tWinPoints += player.winPoints
-					game.rounds[i].teamStats[player.teamClanName].tImpactPoints += player.impactPoints
-				} else if player.side == 3 {
-					game.totalPlayerStats[steam].winPointsNormalizer += game.rounds[i].initCTerroristCount
-					game.totalPlayerStats[steam].ctImpactPoints += player.impactPoints
-					game.totalPlayerStats[steam].ctWinPoints += player.winPoints
-					game.totalPlayerStats[steam].ctOK += player.ok
-					game.totalPlayerStats[steam].ctOL += player.ol
-					game.totalPlayerStats[steam].ctKills += player.kills
-					game.totalPlayerStats[steam].ctDeaths += player.deaths
-					game.totalPlayerStats[steam].ctKASTRounds += player.kastRounds
-					game.totalPlayerStats[steam].ctDamage += player.damage
-					game.totalPlayerStats[steam].ctADP += player.deathPlacement
-					//game.totalPlayerStats[steam].tTeamsWinPoints +=
-					game.totalPlayerStats[steam].ctWinPointsNormalizer += game.rounds[i].initCTerroristCount
-					game.totalPlayerStats[steam].ctRounds += 1
-					game.totalPlayerStats[steam].ctAWP += player.ctAWP
-
-					game.rounds[i].teamStats[player.teamClanName].ctWinPoints += player.winPoints
-					game.rounds[i].teamStats[player.teamClanName].ctImpactPoints += player.impactPoints
+				} else { //round ended due to damage/time
+					player.rws = 100 * (float64(player.damage) / float64(game.rounds[i].winTeamDmg))
 				}
-
-				game.rounds[i].teamStats[player.teamClanName].winPoints += player.winPoints
-				game.rounds[i].teamStats[player.teamClanName].impactPoints += player.impactPoints
-
-			}
-			for steam, player := range (*game.rounds[i]).playerStats {
-				game.totalPlayerStats[steam].teamsWinPoints += game.rounds[i].teamStats[player.teamClanName].winPoints
-				game.totalPlayerStats[steam].tTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].tWinPoints
-				game.totalPlayerStats[steam].ctTeamsWinPoints += game.rounds[i].teamStats[player.teamClanName].ctWinPoints
-
-				//give players rws
-				if player.RF != 0 {
-					if game.rounds[i].endDueToBombEvent {
-						player.rws = 70 * (float64(player.damage) / float64(game.rounds[i].winTeamDmg))
-						if player.side == 2 && game.rounds[i].planter == player.steamID {
-							player.rws += 30
-						} else if player.side == 3 && game.rounds[i].defuser == player.steamID {
-							player.rws += 30
-						}
-					} else { //round ended due to damage/time
-						player.rws = 100 * (float64(player.damage) / float64(game.rounds[i].winTeamDmg))
-					}
-					game.totalPlayerStats[steam].rws += player.rws
-				}
+				game.totalPlayerStats[steam].rws += player.rws
 			}
 		}
 	}
@@ -365,92 +376,85 @@ func calculateSidedStats(game *game) {
 	game.ctPlayerStats = make(map[uint64]*playerStats)
 	game.tPlayerStats = make(map[uint64]*playerStats)
 
-	validRoundsMap := make(map[int8]bool)
 	for i := len(game.rounds) - 1; i >= 0; i-- {
-		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
-		if game.rounds[i].integrityCheck && !game.rounds[i].knifeRound && !validRoundExists {
-			//this i-th round is good to add
+		game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
 
-			validRoundsMap[game.rounds[i].roundNum] = true
-			game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
-
-			//add to round master stats
-			for steam, player := range (*game.rounds[i]).playerStats {
-				//sidedStats := make(map[uint64]*playerStats)
-				sidedStats := game.ctPlayerStats
-				if player.side == 2 {
-					sidedStats = game.tPlayerStats
-				}
-				if sidedStats[steam] == nil {
-					sidedStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamClanName: player.teamClanName}
-				}
-				sidedStats[steam].rounds += 1
-				sidedStats[steam].kills += player.kills
-				sidedStats[steam].assists += player.assists
-				sidedStats[steam].deaths += player.deaths
-				sidedStats[steam].damage += player.damage
-				sidedStats[steam].ticksAlive += player.ticksAlive
-				sidedStats[steam].deathPlacement += player.deathPlacement
-				sidedStats[steam].trades += player.trades
-				sidedStats[steam].traded += player.traded
-				sidedStats[steam].ok += player.ok
-				sidedStats[steam].ol += player.ol
-				sidedStats[steam].killPoints += player.killPoints
-				sidedStats[steam].cl_1 += player.cl_1
-				sidedStats[steam].cl_2 += player.cl_2
-				sidedStats[steam].cl_3 += player.cl_3
-				sidedStats[steam].cl_4 += player.cl_4
-				sidedStats[steam].cl_5 += player.cl_5
-				sidedStats[steam]._2k += player._2k
-				sidedStats[steam]._3k += player._3k
-				sidedStats[steam]._4k += player._4k
-				sidedStats[steam]._5k += player._5k
-				sidedStats[steam].nadeDmg += player.nadeDmg
-				sidedStats[steam].infernoDmg += player.infernoDmg
-				sidedStats[steam].utilDmg += player.utilDmg
-				sidedStats[steam].ef += player.ef
-				sidedStats[steam].fAss += player.fAss
-				sidedStats[steam].enemyFlashTime += player.enemyFlashTime
-				sidedStats[steam].hs += player.hs
-				sidedStats[steam].kastRounds += player.kastRounds
-				sidedStats[steam].saves += player.saves
-				sidedStats[steam].entries += player.entries
-				sidedStats[steam].impactPoints += player.impactPoints
-				sidedStats[steam].winPoints += player.winPoints
-				sidedStats[steam].awpKills += player.awpKills
-				sidedStats[steam].RF += player.RF
-				sidedStats[steam].RA += player.RA
-				sidedStats[steam].nadesThrown += player.nadesThrown
-				sidedStats[steam].smokeThrown += player.smokeThrown
-				sidedStats[steam].flashThrown += player.flashThrown
-				sidedStats[steam].firesThrown += player.firesThrown
-				sidedStats[steam].damageTaken += player.damageTaken
-				sidedStats[steam].suppDamage += player.suppDamage
-				sidedStats[steam].suppRounds += player.suppRounds
-				sidedStats[steam].rwk += player.rwk
-				sidedStats[steam].mip += player.mip
-				sidedStats[steam].eac += player.eac
-
-				if player.isBot {
-					sidedStats[steam].isBot = true
-				}
-
-				sidedStats[steam].lurkRounds += player.lurkRounds
-				if player.lurkRounds != 0 {
-					sidedStats[steam].wlp += player.winPoints
-				}
-
-				sidedStats[steam].rws += player.rws
-
-				if player.side == 2 {
-					sidedStats[steam].rating = game.totalPlayerStats[steam].tRating
-					sidedStats[steam].impactRating = game.totalPlayerStats[steam].tImpactRating
-				} else {
-					sidedStats[steam].rating = game.totalPlayerStats[steam].ctRating
-					sidedStats[steam].impactRating = game.totalPlayerStats[steam].ctImpactRating
-				}
-
+		//add to round master stats
+		for steam, player := range (*game.rounds[i]).playerStats {
+			//sidedStats := make(map[uint64]*playerStats)
+			sidedStats := game.ctPlayerStats
+			if player.side == 2 {
+				sidedStats = game.tPlayerStats
 			}
+			if sidedStats[steam] == nil {
+				sidedStats[steam] = &playerStats{name: player.name, steamID: player.steamID, teamClanName: player.teamClanName}
+			}
+			sidedStats[steam].rounds += 1
+			sidedStats[steam].kills += player.kills
+			sidedStats[steam].assists += player.assists
+			sidedStats[steam].deaths += player.deaths
+			sidedStats[steam].damage += player.damage
+			sidedStats[steam].ticksAlive += player.ticksAlive
+			sidedStats[steam].deathPlacement += player.deathPlacement
+			sidedStats[steam].trades += player.trades
+			sidedStats[steam].traded += player.traded
+			sidedStats[steam].ok += player.ok
+			sidedStats[steam].ol += player.ol
+			sidedStats[steam].killPoints += player.killPoints
+			sidedStats[steam].cl_1 += player.cl_1
+			sidedStats[steam].cl_2 += player.cl_2
+			sidedStats[steam].cl_3 += player.cl_3
+			sidedStats[steam].cl_4 += player.cl_4
+			sidedStats[steam].cl_5 += player.cl_5
+			sidedStats[steam]._2k += player._2k
+			sidedStats[steam]._3k += player._3k
+			sidedStats[steam]._4k += player._4k
+			sidedStats[steam]._5k += player._5k
+			sidedStats[steam].nadeDmg += player.nadeDmg
+			sidedStats[steam].infernoDmg += player.infernoDmg
+			sidedStats[steam].utilDmg += player.utilDmg
+			sidedStats[steam].ef += player.ef
+			sidedStats[steam].fAss += player.fAss
+			sidedStats[steam].enemyFlashTime += player.enemyFlashTime
+			sidedStats[steam].hs += player.hs
+			sidedStats[steam].kastRounds += player.kastRounds
+			sidedStats[steam].saves += player.saves
+			sidedStats[steam].entries += player.entries
+			sidedStats[steam].impactPoints += player.impactPoints
+			sidedStats[steam].winPoints += player.winPoints
+			sidedStats[steam].awpKills += player.awpKills
+			sidedStats[steam].RF += player.RF
+			sidedStats[steam].RA += player.RA
+			sidedStats[steam].nadesThrown += player.nadesThrown
+			sidedStats[steam].smokeThrown += player.smokeThrown
+			sidedStats[steam].flashThrown += player.flashThrown
+			sidedStats[steam].firesThrown += player.firesThrown
+			sidedStats[steam].damageTaken += player.damageTaken
+			sidedStats[steam].suppDamage += player.suppDamage
+			sidedStats[steam].suppRounds += player.suppRounds
+			sidedStats[steam].rwk += player.rwk
+			sidedStats[steam].mip += player.mip
+			sidedStats[steam].eac += player.eac
+
+			if player.isBot {
+				sidedStats[steam].isBot = true
+			}
+
+			sidedStats[steam].lurkRounds += player.lurkRounds
+			if player.lurkRounds != 0 {
+				sidedStats[steam].wlp += player.winPoints
+			}
+
+			sidedStats[steam].rws += player.rws
+
+			if player.side == 2 {
+				sidedStats[steam].rating = game.totalPlayerStats[steam].tRating
+				sidedStats[steam].impactRating = game.totalPlayerStats[steam].tImpactRating
+			} else {
+				sidedStats[steam].rating = game.totalPlayerStats[steam].ctRating
+				sidedStats[steam].impactRating = game.totalPlayerStats[steam].ctImpactRating
+			}
+
 		}
 	}
 

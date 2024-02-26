@@ -113,6 +113,7 @@ type round struct {
 	serverNormalizer   int
 	serverImpactPoints float64
 	knifeRound         bool
+	roundEndReason     int
 
 	WPAlog        []*wpalog
 	bombStartTick int
