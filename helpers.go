@@ -93,11 +93,11 @@ func validateTeamName(game *game, teamName string, teamNum common.Team) string {
 		//we are hardcoding during what rounds each team will have what side
 		round := game.potentialRound.roundNum
 		swap := false
-		if round >= 16 && round <= 33 {
+		if round >= MR+1 && round <= (MR*2)+3 {
 			swap = true
-		} else if round >= 34 {
+		} else if round >= (MR*2)+4 {
 			//we are now in OT hell :)
-			if (round-34)/6%2 != 0 {
+			if (round-((MR*2)+4))/6%2 != 0 {
 				swap = true
 			}
 		}
