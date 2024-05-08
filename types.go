@@ -88,6 +88,7 @@ type teamStats struct {
 	tR             int
 	tRW            int
 	deaths         int
+	ratingAvg      float64
 
 	//kinda garbo
 	normalizer int
@@ -219,6 +220,7 @@ type playerStats struct {
 	tr           float64 //trade ratio
 	impactRating float64
 	rating       float64
+	deltaRating  float64
 
 	//side specific
 	tDamage               int

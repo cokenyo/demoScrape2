@@ -315,6 +315,8 @@ func calculateDerivedFields(game *game) {
 			playerRatingDeathComponent = 0.21
 		}
 		player.rating = (0.3 * player.impactRating) + (0.35 * (player.kR / killRoundAvg)) + playerRatingDeathComponent + (0.08 * (player.kast / kastRoundAvg)) + (0.2 * (player.adr / adrAvg))
+		game.totalTeamStats[player.teamClanName].ratingAvg += player.rating
+		game.totalTeamStats[player.teamClanName].normalizer += 1
 
 		//ctRating
 		openingFactor = (float64(player.ctOK-player.ctOL) / 13.0) + 1
@@ -370,6 +372,17 @@ func calculateDerivedFields(game *game) {
 		fmt.Println("adrAvg", adrAvg)
 	}
 
+	for _, player := range game.totalPlayerStats {
+		players := float64(game.totalTeamStats[player.teamClanName].normalizer)
+		teamAvg := (game.totalTeamStats[player.teamClanName].ratingAvg / players)
+		adjustedAvg := (players*teamAvg - player.rating) / (players - 1)
+		player.deltaRating = player.rating - adjustedAvg
+	}
+
+	for _, team := range game.totalTeamStats {
+		team.ratingAvg = team.ratingAvg / float64(team.normalizer)
+	}
+
 	calculateSidedStats(game)
 	return
 }
@@ -380,7 +393,6 @@ func calculateSidedStats(game *game) {
 	game.tPlayerStats = make(map[uint64]*playerStats)
 
 	for i := len(game.rounds) - 1; i >= 0; i-- {
-		game.rounds[i].serverNormalizer += game.rounds[i].initTerroristCount + game.rounds[i].initCTerroristCount
 
 		//add to round master stats
 		for steam, player := range (*game.rounds[i]).playerStats {

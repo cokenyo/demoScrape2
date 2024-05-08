@@ -7,7 +7,7 @@ toolchain go1.21.3
 require (
 	github.com/joho/godotenv v1.4.0
 	github.com/machinebox/graphql v0.2.2
-	github.com/markus-wa/demoinfocs-golang/v4 v4.0.2
+	github.com/markus-wa/demoinfocs-golang/v4 v4.1.3
 	github.com/remeh/sizedwaitgroup v1.0.0
 )
 
