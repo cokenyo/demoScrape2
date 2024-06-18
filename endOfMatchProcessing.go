@@ -9,12 +9,16 @@ func removeInvalidRounds(game *game) {
 	//we want to remove bad rounds (knife/veto rounds, incomplete rounds, redo rounds)
 	validRoundsMap := make(map[int8]bool)
 	validRounds := make([]*round, 0)
+	lastProcessedRoundNum := game.rounds[len(game.rounds)-1].roundNum + 1
 	for i := len(game.rounds) - 1; i >= 0; i-- {
 		_, validRoundExists := validRoundsMap[game.rounds[i].roundNum]
 		if game.rounds[i].integrityCheck && !game.rounds[i].knifeRound && !validRoundExists {
-			//this i-th round is good to add
-			validRoundsMap[game.rounds[i].roundNum] = true
-			validRounds = append(validRounds, game.rounds[i])
+			if game.rounds[i].roundNum == lastProcessedRoundNum-1 {
+				//this i-th round is good to add
+				validRoundsMap[game.rounds[i].roundNum] = true
+				validRounds = append(validRounds, game.rounds[i])
+				lastProcessedRoundNum = game.rounds[i].roundNum
+			}
 		} else {
 			//this i-th round is bad and we will remove it
 		}

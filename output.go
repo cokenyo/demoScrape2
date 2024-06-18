@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 	//dem "github.com/markus-wa/demoinfocs-golang/v2/pkg/demoinfocs"
 )
 
@@ -281,7 +282,12 @@ func createHash(game *game) string {
 	for _, player := range game.totalPlayerStats {
 		totalDamage += player.damage
 		totalUD += player.utilDmg
-		playerInitial += string(player.name[0])
+		initial := player.name[0]
+		if unicode.IsLetter(rune(initial)) {
+			playerInitial += string(initial)
+		} else {
+			playerInitial += "z"
+		}
 	}
 
 	s := strings.Split(playerInitial, "")

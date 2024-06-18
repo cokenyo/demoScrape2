@@ -205,6 +205,7 @@ type playerStats struct {
 	mip                 float64
 	rws                 float64 //round win shares
 	eac                 int     //effective assist contributions
+	engagements         int
 
 	rwk int //rounds with kills
 
@@ -221,6 +222,7 @@ type playerStats struct {
 	impactRating float64
 	rating       float64
 	deltaRating  float64
+	eR           float64 //engagements per round
 
 	//side specific
 	tDamage               int

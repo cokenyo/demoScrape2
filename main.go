@@ -582,11 +582,12 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 							if DEBUG {
 								fmt.Println(terrorist.Name)
 							}
-						}
-						dist := game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates
-						if dist < lurkerDist && dist > 0 {
-							lurkerDist = dist
-							lurkerSteam = terrorist.SteamID64
+						} else {
+							dist := game.potentialRound.playerStats[terrorist.SteamID64].distanceToTeammates
+							if dist < lurkerDist && dist > 0 {
+								lurkerDist = dist
+								lurkerSteam = terrorist.SteamID64
+							}
 						}
 					}
 				}
@@ -739,6 +740,15 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 		//CS2 swapped this event to be before RoundEnd
 		//We have relied on this as a back up for failed RoundEnd events
 		//may revisit depending on event reliability
+
+		//added to ensure that a bad round that gets finished does not premuturely finish the game since we track score separately
+		if game.flags.isGameLive {
+			updatedTeam := game.teams[validateTeamName(game, e.TeamState.ClanName(), e.TeamState.Team())]
+			if e.OldScore != updatedTeam.score {
+				updatedTeam.score = e.OldScore
+			}
+		}
+
 	})
 
 	//round end official doesnt fire on the last round
@@ -779,6 +789,11 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 			}
 			if e.Assister != nil && pS[e.Assister.SteamID64] != nil {
 				assisterExists = true
+			}
+			if e.Weapon.Type == 404 && isRoundFinalInHalf(game.potentialRound.roundNum) {
+				killerExists = false
+				victimExists = false
+				assisterExists = false
 			}
 
 			killValue := 1.0
@@ -1021,12 +1036,13 @@ func processDemo(demoName string, swg *sizedwaitgroup.SizedWaitGroup) {
 	})
 
 	p.RegisterEventHandler(func(e events.PlayerHurt) {
-		//fmt.Printf("Player Hurt\n")
+		fmt.Printf("Player Hurt\n")
 		if game.flags.isGameLive {
 			equipment := e.Weapon.Type
-			if e.Player != nil && game.potentialRound.playerStats[e.Player.SteamID64] != nil {
+			validDmg := e.Player != nil && game.potentialRound.playerStats[e.Player.SteamID64] != nil && (equipment != 404 || !isRoundFinalInHalf(game.potentialRound.roundNum))
+			if validDmg {
 				game.potentialRound.playerStats[e.Player.SteamID64].damageTaken += e.HealthDamageTaken
-			} else if e.Player != nil && e.Player.IsConnected {
+			} else if e.Player != nil && e.Player.IsConnected && !(equipment == 404 && isRoundFinalInHalf(game.potentialRound.roundNum)) {
 				//blow up
 				panic("We have a connected player who is not nil but no playerstats!")
 			}

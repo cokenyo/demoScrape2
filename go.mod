@@ -7,7 +7,7 @@ toolchain go1.21.3
 require (
 	github.com/joho/godotenv v1.4.0
 	github.com/machinebox/graphql v0.2.2
-	github.com/markus-wa/demoinfocs-golang/v4 v4.1.3
+	github.com/markus-wa/demoinfocs-golang/v4 v4.2.1
 	github.com/remeh/sizedwaitgroup v1.0.0
 )
 
@@ -23,5 +23,5 @@ require (
 	github.com/oklog/ulid/v2 v2.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.34.1 // indirect
 )

@@ -67,6 +67,10 @@ func isDuringExpectedRound(game *game, p dem.Parser) bool {
 	return (isPreWinCon || isAfterWinCon)
 }
 
+func isRoundFinalInHalf(round int8) bool {
+	return round%MR == 0 || (round > (MR*2) && round%3 == 0)
+}
+
 func validateTeamName(game *game, teamName string, teamNum common.Team) string {
 	if teamName != "" {
 		name := ""
